@@ -11,7 +11,6 @@ import org.netbeans.editor.GuardedDocument;
 
 /**
  *
- * @author Francesco Illuminati <fillumina@gmail.com>
  */
 class TreeHelper {
     /**

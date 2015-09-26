@@ -14,6 +14,7 @@ import com.sun.source.tree.VariableTree;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -43,7 +44,7 @@ public class PropertyMethodBuilder {
         this.className = className;
     }
 
-    int removeExistingFluentSetters(int index) {
+    int removeExistingPropMethods(int index) {
         int counter = 0;
         for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
             Tree member = treeIt.next();
@@ -68,28 +69,29 @@ public class PropertyMethodBuilder {
         return index;
     }
 
-    void addFluentSetters(int index) {
+    void addPropMethods(int index) {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
         List<AnnotationTree> annotations = new ArrayList<>();
 
         int position = index - 1;
         for (VariableElement element : elements) {
-            VariableTree parameter =
-                    make.Variable(make.Modifiers(Collections.<Modifier>singleton(Modifier.FINAL),
-                            Collections.<AnnotationTree>emptyList()),
-                            "value",
-                            make.Identifier(toStringWithoutPackages(element)),
+            VariableTree parameter =  make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
                             null);
+            
 
-            ExpressionTree returnType = make.QualIdent(className);
+            
+            ExpressionTree returnType = make.QualIdent("void");
+            ExpressionTree param = make.QualIdent("java.lang.String");
+            //ExpressionTree returnType = make.QualIdent(className);
 
-            final String bodyText = createFluentSetterMethodBody(element);
+            final String bodyText = createPropSetterMethodBody(element);
 
             MethodTree method = make.Method(
                     make.Modifiers(modifiers, annotations),
-                    element.getSimpleName(),
+                   getSetterName( element.getSimpleName().toString() ),
                     returnType,
                     Collections.<TypeParameterTree>emptyList(),
+                    //Collections.<VariableTree>singletonList(parameter),
                     Collections.<VariableTree>singletonList(parameter),
                     Collections.<ExpressionTree>emptyList(),
                     bodyText,
@@ -100,12 +102,11 @@ public class PropertyMethodBuilder {
         }
     }
 
-    private static String createFluentSetterMethodBody(Element element) {
+    private static String createPropSetterMethodBody(Element element) {
         StringBuilder sb = new StringBuilder();
-        sb.append("{\nthis.")
+        sb.append("{\n")
                 .append(element.getSimpleName())
-                .append(" = value;\n")
-                .append("return this;\n}");
+                .append(".set(value);\n}");
         return sb.toString();
     }
 
@@ -124,9 +125,14 @@ public class PropertyMethodBuilder {
     }
     
     
+    private String getSetterName( String fieldName ) {
+        return "set" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+    }
+    
         private static String toStringWithoutPackages(VariableElement element) {
-        return PackageHelper.removePackagesFromGenericsType(
-                element.asType().toString());
+            String fullProp = PackageHelper.removePackagesFromGenericsType(element.asType().toString());
+            
+        return fullProp.substring(0, fullProp.indexOf(("Prop" ) ) );
     }
 
 }

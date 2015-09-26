@@ -34,8 +34,7 @@ abstract class CodeGeneratorCancellableTask implements CancellableTask<WorkingCo
         final int caretOffset = textComponent.getCaretPosition();
         TreePath path = wc.getTreeUtilities().pathFor(caretOffset);
         path = TreeHelper.getParentElementOfKind(Tree.Kind.CLASS, path);
-        int idx = TreeHelper.findClassMemberIndex(wc,
-                (ClassTree) path.getLeaf(), caretOffset);
+        int idx = TreeHelper.findClassMemberIndex(wc,(ClassTree) path.getLeaf(), caretOffset);
         generateCode(wc, path, idx);
     }
 

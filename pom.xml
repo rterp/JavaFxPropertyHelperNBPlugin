@@ -3,10 +3,11 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.lynden</groupId>
     <artifactId>NBJavaFxBeanHelper</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.4-SNAPSHOT</version>
     <packaging>nbm</packaging>
     <build>
         <plugins>
+            
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>nbm-maven-plugin</artifactId>
@@ -42,7 +43,7 @@
             </snapshots>
         </repository>
     </repositories>
-    <dependencies>
+    <dependencies>        
         <dependency>
             <groupId>org.netbeans.api</groupId>
             <artifactId>org-netbeans-api-annotations-common</artifactId>
