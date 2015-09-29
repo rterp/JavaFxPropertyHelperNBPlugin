@@ -1,7 +1,26 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Lynden, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+*
  */
 package com.lynden.netbeans.javafx;
 
@@ -13,7 +32,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javafx.beans.property.Property;
+import javafx.beans.property.*;
+import javafx.embed.swing.JFXPanel;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.ElementFilter;
@@ -35,6 +55,8 @@ import org.openide.util.Lookup;
 public class JavaFxBeanHelper implements CodeGenerator {
 
     protected JTextComponent textComponent;
+    //this is needed to initialize the JavaFx Toolkit
+    protected JFXPanel panel = new JFXPanel();
     protected List<VariableElement> fields;
 
     public JavaFxBeanHelper textComponent(final JTextComponent value) {
@@ -139,20 +161,38 @@ public class JavaFxBeanHelper implements CodeGenerator {
             TypeElement typeElement = (TypeElement) controller.getTrees().getElement(path);
 
             if (!typeElement.getKind().isClass()) {
-                throw new CodeGeneratorException("typeElement "+ typeElement.getKind().name()+ " is not a class, cannot generate code.");
+                throw new CodeGeneratorException("typeElement " + typeElement.getKind().name() + " is not a class, cannot generate code.");
             }
 
             Elements elements = controller.getElements();
-            List<VariableElement> temp =  ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
-            
-            for( VariableElement e : temp ) {
-                if( Property.class.isAssignableFrom( Class.forName(e.asType().toString() )) ) {
-                    elementList.add(e);
+            List<VariableElement> temp = ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
+
+            for (VariableElement e : temp) {
+                try {
+                    Class<?> memberClass = Class.forName(getClassName(e.asType().toString()));
+                    if (Property.class.isAssignableFrom(memberClass) &&
+                        ! ListProperty.class.isAssignableFrom(memberClass) &&
+                        ! MapProperty.class.isAssignableFrom(memberClass) &&
+                        ! ObjectProperty.class.isAssignableFrom(memberClass) ) {
+                        
+                        elementList.add(e);
+                    }
+                } catch (Exception ex) {
+                    Exceptions.printStackTrace(ex);
                 }
             }
             return elementList;
-        } catch (NullPointerException | ClassNotFoundException ex) {
+        } catch (NullPointerException ex) {
             throw new CodeGeneratorException(ex);
+        }
+    }
+    
+    
+    protected String getClassName( String fullName ) {
+        if( !fullName.contains("<") ) {
+            return fullName;
+        } else {
+            return fullName.substring( 0, fullName.indexOf("<") );
         }
     }
 
