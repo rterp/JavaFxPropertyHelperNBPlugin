@@ -28,7 +28,7 @@ import org.netbeans.api.java.source.TreeMaker;
  * @author RobTerpilowski
  */
 public class PropertyMethodBuilder {
-    
+
     private final TreeMaker make;
     private final List<Tree> members;
     private final List<VariableElement> elements;
@@ -52,15 +52,15 @@ public class PropertyMethodBuilder {
             if (member.getKind().equals(Tree.Kind.METHOD)) {
                 MethodTree mt = (MethodTree) member;
                 for (Element element : elements) {
-                    if (mt.getName().contentEquals(element.getSimpleName()) &&
-                            mt.getParameters().size() == 1 &&
-                            mt.getReturnType() != null &&
-                            mt.getReturnType().getKind() == Tree.Kind.IDENTIFIER) {
-                        treeIt.remove();
-                        if (index > counter) {
-                            index--;
-                        }
-                        break;
+                    if( mt.getName().contentEquals(getGetterName(element.getSimpleName().toString()) ) ||
+                        mt.getName().contentEquals(getSetterName(element.getSimpleName().toString()) ) ||
+                        mt.getName().contentEquals(getPropertyMethodName(element.getSimpleName().toString()))) {
+                            
+                    treeIt.remove();
+                    if (index > counter) {
+                        index--;
+                    }
+                    break;
                     }
                 }
             }
@@ -70,39 +70,114 @@ public class PropertyMethodBuilder {
     }
 
     void addPropMethods(int index) {
-        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
-        List<AnnotationTree> annotations = new ArrayList<>();
 
         int position = index - 1;
         for (VariableElement element : elements) {
-            VariableTree parameter =  make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
-                            null);
-            
-
-            
-            ExpressionTree returnType = make.QualIdent("void");
-            ExpressionTree param = make.QualIdent("java.lang.String");
-            //ExpressionTree returnType = make.QualIdent(className);
-
-            final String bodyText = createPropSetterMethodBody(element);
-
-            MethodTree method = make.Method(
-                    make.Modifiers(modifiers, annotations),
-                   getSetterName( element.getSimpleName().toString() ),
-                    returnType,
-                    Collections.<TypeParameterTree>emptyList(),
-                    //Collections.<VariableTree>singletonList(parameter),
-                    Collections.<VariableTree>singletonList(parameter),
-                    Collections.<ExpressionTree>emptyList(),
-                    bodyText,
-                    null);
 
             position = Math.min(position + 1, members.size());
-            members.add(position, method);
+            members.add(position, createSetMethod(element));
+            position = Math.min(position + 1, members.size());
+            members.add(position, createGetMethod(element));
+            position = Math.min(position + 1, members.size());
+            members.add(position, createPropertyMethod(element));
+
         }
     }
 
-    private static String createPropSetterMethodBody(Element element) {
+    protected MethodTree createGetMethod(VariableElement element) {
+        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
+        List<AnnotationTree> annotations = new ArrayList<>();
+        VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
+                null);
+
+        ExpressionTree returnType = make.QualIdent(parameter.getType().toString());
+
+        final String bodyText = createPropGetterMethodBody(element);
+
+        MethodTree method = make.Method(
+                make.Modifiers(modifiers, annotations),
+                getGetterName(element.getSimpleName().toString()),
+                returnType,
+                Collections.<TypeParameterTree>emptyList(),
+                //Collections.<VariableTree>singletonList(parameter),
+                Collections.<VariableTree>emptyList(),
+                Collections.<ExpressionTree>emptyList(),
+                bodyText,
+                null);
+
+        return method;
+
+    }
+
+    protected MethodTree createPropertyMethod(VariableElement element) {
+        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
+        List<AnnotationTree> annotations = new ArrayList<>();
+        VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
+                null);
+
+        ExpressionTree returnType = make.QualIdent(parameter.getType().toString() + "Property");
+
+        final String bodyText = createPropertyMethodBody(element);
+
+        MethodTree method = make.Method(
+                make.Modifiers(modifiers, annotations),
+                getPropertyMethodName(element.getSimpleName().toString()),
+                returnType,
+                Collections.<TypeParameterTree>emptyList(),
+                //Collections.<VariableTree>singletonList(parameter),
+                Collections.<VariableTree>emptyList(),
+                Collections.<ExpressionTree>emptyList(),
+                bodyText,
+                null);
+
+        return method;
+
+    }
+
+    protected MethodTree createSetMethod(VariableElement element) {
+        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
+        List<AnnotationTree> annotations = new ArrayList<>();
+        VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
+                null);
+
+        ExpressionTree returnType = make.QualIdent("void");
+
+        final String bodyText = createPropSetterMethodBody(element);
+
+        MethodTree method = make.Method(
+                make.Modifiers(modifiers, annotations),
+                getSetterName(element.getSimpleName().toString()),
+                returnType,
+                Collections.<TypeParameterTree>emptyList(),
+                //Collections.<VariableTree>singletonList(parameter),
+                Collections.<VariableTree>singletonList(parameter),
+                Collections.<ExpressionTree>emptyList(),
+                bodyText,
+                null);
+
+        return method;
+
+    }
+
+    protected String createPropertyMethodBody(Element element) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\n")
+                .append("return ")
+                .append(element.getSimpleName())
+                .append(";\n}");
+        return sb.toString();
+    }
+
+    protected String createPropGetterMethodBody(Element element) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\n")
+                .append("return ")
+                .append(element.getSimpleName())
+                .append(".get();\n}");
+        return sb.toString();
+    }
+
+    protected String createPropSetterMethodBody(Element element) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\n")
                 .append(element.getSimpleName())
@@ -112,10 +187,10 @@ public class PropertyMethodBuilder {
 
     void addFields() {
         for (VariableElement element : elements) {
-            VariableTree field =
-                    make.Variable(make.Modifiers(
-                            EnumSet.of(Modifier.PRIVATE),
-                            Collections.<AnnotationTree>emptyList()),
+            VariableTree field
+                    = make.Variable(make.Modifiers(
+                                    EnumSet.of(Modifier.PRIVATE),
+                                    Collections.<AnnotationTree>emptyList()),
                             element.getSimpleName().toString(),
                             make.Identifier(toStringWithoutPackages(element)),
                             null);
@@ -123,16 +198,23 @@ public class PropertyMethodBuilder {
             members.add(field);
         }
     }
-    
-    
-    private String getSetterName( String fieldName ) {
+
+    private String getPropertyMethodName(String fieldName) {
+        return fieldName + "Property";
+    }
+
+    private String getSetterName(String fieldName) {
         return "set" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
     }
-    
-        private static String toStringWithoutPackages(VariableElement element) {
-            String fullProp = PackageHelper.removePackagesFromGenericsType(element.asType().toString());
-            
-        return fullProp.substring(0, fullProp.indexOf(("Prop" ) ) );
+
+    private String getGetterName(String fieldName) {
+        return "get" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+    }
+
+    private static String toStringWithoutPackages(VariableElement element) {
+        String fullProp = PackageHelper.removePackagesFromGenericsType(element.asType().toString());
+
+        return fullProp.substring(0, fullProp.indexOf(("Prop")));
     }
 
 }
