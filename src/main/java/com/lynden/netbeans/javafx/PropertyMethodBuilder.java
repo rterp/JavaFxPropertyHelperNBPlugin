@@ -45,6 +45,8 @@ import org.netbeans.api.java.source.TreeMaker;
  *
  */
 public class PropertyMethodBuilder {
+    
+    private static final String PROPERTY = "Property"; // NOI18N
 
     private final TreeMaker make;
     private final List<Tree> members;
@@ -139,7 +141,7 @@ public class PropertyMethodBuilder {
         VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
                 null);
 
-        ExpressionTree returnType = make.QualIdent(parameter.getType().toString() + "Property");
+        ExpressionTree returnType = make.QualIdent(parameter.getType().toString() + PROPERTY);
 
         final String bodyText = createPropertyMethodBody(element);
 
@@ -224,15 +226,43 @@ public class PropertyMethodBuilder {
     }
 
     private String getPropertyMethodName(String fieldName) {
-        return fieldName + "Property";
+        final StringBuilder sb = new StringBuilder();
+        sb.append(this.prepareFieldNameForMethodName(fieldName, Boolean.FALSE));
+        sb.append(PROPERTY);
+        
+        return sb.toString();
     }
 
     private String getSetterName(String fieldName) {
-        return "set" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+        final StringBuilder sb = new StringBuilder();
+        sb.append("set");
+        sb.append(this.prepareFieldNameForMethodName(fieldName));
+        
+        return sb.toString();
     }
 
     private String getGetterName(String fieldName) {
-        return "get" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+        final StringBuilder sb = new StringBuilder();
+        sb.append("get");
+        sb.append(this.prepareFieldNameForMethodName(fieldName));
+        
+        return sb.toString();
+    }
+    
+    private String prepareFieldNameForMethodName(String fieldName, boolean firstCharToUpperCase) {
+        if (firstCharToUpperCase) {
+            fieldName = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+        }
+        
+        if (fieldName.endsWith(PROPERTY)) {
+            fieldName = fieldName.substring(0, fieldName.length() - PROPERTY.length());
+        }
+        
+        return fieldName;
+    }
+    
+    private String prepareFieldNameForMethodName(String fieldName) {
+        return this.prepareFieldNameForMethodName(fieldName, Boolean.TRUE);
     }
 
     private static String toStringWithoutPackages(VariableElement element) {

@@ -10,20 +10,20 @@ private StringProperty name;
 public StringProperty getName() { 
     return name;
 }
-public void setName( StringProperty stringProperty ) {
-    name = stringProperty
+public void setName( StringProperty name ) {
+    this.name = name;
 }
 ```
 
-This plugin would create the following methods.
+This plugin would create the following methods:
 
 ```java
 public String getName() {
     return name.get();
 }
 
-public void setName( String string ) {
-    name.set(string);
+public void setName( String value ) {
+    name.set(value);
 }
 
 public StringProperty nameProperty() {
@@ -31,7 +31,25 @@ public StringProperty nameProperty() {
 }
 ```
 
-#Usage
+It's also possible to use variables with the suffix `Property` in their names 
+which will create the following methods: 
+
+```java
+private StringProperty nameProperty;
+public String getName() {
+    return nameProperty.get();
+}
+
+public void setName( String value ) {
+    nameProperty.set(value);
+}
+
+public StringProperty nameProperty() {
+    return nameProperty;
+}
+```
+
+# Usage
 
 Press Alt-Insert to get the "Generate" popup menu, and select "JavaFx Props Getters and Setters"
 ![alt tag](https://rterp.files.wordpress.com/2015/09/ubuntu1.png)
