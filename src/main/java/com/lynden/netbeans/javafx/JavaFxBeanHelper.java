@@ -171,9 +171,10 @@ public class JavaFxBeanHelper implements CodeGenerator {
                 try {
                     Class<?> memberClass = Class.forName(getClassName(e.asType().toString()));
                     if (Property.class.isAssignableFrom(memberClass) &&
-                        ! ListProperty.class.isAssignableFrom(memberClass) &&
-                        ! MapProperty.class.isAssignableFrom(memberClass) &&
-                        ! ObjectProperty.class.isAssignableFrom(memberClass) ) {
+                        !ListProperty.class.isAssignableFrom(memberClass) &&
+                        !MapProperty.class.isAssignableFrom(memberClass) &&
+                        !ObjectProperty.class.isAssignableFrom(memberClass) &&
+                        !SetProperty.class.isAssignableFrom(memberClass) ) {
                         
                         elementList.add(e);
                     }

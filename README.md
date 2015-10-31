@@ -4,8 +4,8 @@ This NetBeans plugin will help to generate get/set methods for JavaFx properties
 within a POJO.
 
 The standard get/set code generator creates the following get/set methods for a JavaFx property which is not ideal:
-```
 
+```java
 private StringProperty name;
 public StringProperty getName() { 
     return name;
@@ -17,7 +17,7 @@ public void setName( StringProperty stringProperty ) {
 
 This plugin would create the following methods.
 
-```
+```java
 public String getName() {
     return name.get();
 }
@@ -55,3 +55,4 @@ Methods for supported property types will automatically be generated.
 * ListProperty
 * MapProperty
 * ObjectProperty
+* SetProperty
