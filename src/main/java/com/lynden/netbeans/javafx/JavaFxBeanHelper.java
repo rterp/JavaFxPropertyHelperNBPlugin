@@ -84,9 +84,10 @@ public class JavaFxBeanHelper implements CodeGenerator {
         }
     }
 
-    @MimeRegistration(mimeType = "text/x-java", service = CodeGenerator.Factory.class)
+    @MimeRegistration(mimeType = "text/x-java", position = 250, service = CodeGenerator.Factory.class)
     public static class Factory implements CodeGenerator.Factory {
 
+        @Override
         public List<? extends CodeGenerator> create(Lookup context) {
             return Collections.singletonList(new JavaFxBeanHelper(context));
         }
@@ -97,7 +98,7 @@ public class JavaFxBeanHelper implements CodeGenerator {
      */
     @Override
     public String getDisplayName() {
-        return "JavaFx Props Getters & Setters";
+        return "Java FX Getter and Setter...";
     }
 
     /**
