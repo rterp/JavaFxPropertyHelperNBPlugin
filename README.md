@@ -56,7 +56,7 @@ public StringProperty nameProperty() {
 # Usage
 
 Press Alt-Insert to get the "Generate" popup menu, and select "Java FX Getter and Setter..."
-![alt tag]https://rterp.files.wordpress.com/2015/11/nb-plugin-1.png)
+![alt tag](https://rterp.files.wordpress.com/2015/11/nb-plugin-1.png)
 
 
 Methods for supported property types will automatically be generated.
