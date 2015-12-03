@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.lynden</groupId>
     <artifactId>JavaFxPropertyHelperNBPlugin</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
     <packaging>nbm</packaging>
     <licenses>
         <license>
@@ -18,17 +18,23 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>nbm-maven-plugin</artifactId>
-                <version>3.13</version>
+                <version>3.14.1</version>
                 <extensions>true</extensions>
-                <configuration/>
+                <configuration>
+                    <author>Rob Terpilowski</author>
+                    <licenseName>MIT License</licenseName>                     
+                    <licenseFile>LICENSE</licenseFile> 
+                     <keystore>mykeystore</keystore> 
+                    <keystorealias>myself</keystorealias> 
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>2.5.1</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
             <plugin>
