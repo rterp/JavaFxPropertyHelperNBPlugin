@@ -111,7 +111,7 @@ public class PropertyMethodBuilder {
     }
 
     protected MethodTree createGetMethod(VariableElement element) {
-        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
+        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.FINAL);
         List<AnnotationTree> annotations = new ArrayList<>();
         VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
                 null);
@@ -136,7 +136,7 @@ public class PropertyMethodBuilder {
     }
 
     protected MethodTree createPropertyMethod(VariableElement element) {
-        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
+        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.FINAL);
         List<AnnotationTree> annotations = new ArrayList<>();
         VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
                 null);
@@ -161,7 +161,7 @@ public class PropertyMethodBuilder {
     }
 
     protected MethodTree createSetMethod(VariableElement element) {
-        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC);
+        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.FINAL);
         List<AnnotationTree> annotations = new ArrayList<>();
         VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
                 null);
