@@ -20,15 +20,15 @@ public void setName( StringProperty name ) {
 This plugin would create the following methods:
 
 ```java
-public String getName() {
+public final String getName() {
     return name.get();
 }
 
-public void setName( String value ) {
+public final void setName( String value ) {
     name.set(value);
 }
 
-public StringProperty nameProperty() {
+public final StringProperty nameProperty() {
     return name;
 }
 ```
@@ -38,15 +38,15 @@ which will create the following methods:
 
 ```java
 private StringProperty nameProperty;
-public String getName() {
+public final String getName() {
     return nameProperty.get();
 }
 
-public void setName( String value ) {
+public final void setName( String value ) {
     nameProperty.set(value);
 }
 
-public StringProperty nameProperty() {
+public final StringProperty nameProperty() {
     return nameProperty;
 }
 ```
