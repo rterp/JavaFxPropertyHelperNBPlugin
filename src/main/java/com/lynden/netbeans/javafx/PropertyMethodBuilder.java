@@ -32,9 +32,11 @@ import com.sun.source.tree.VariableTree;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
@@ -47,11 +49,27 @@ import org.netbeans.api.java.source.TreeMaker;
 public class PropertyMethodBuilder {
     
     private static final String PROPERTY = "Property"; // NOI18N
+    private static final Map<String,String> PRIMITIVES_MAP;
+
+    static {
+	PRIMITIVES_MAP = new HashMap<>();
+	PRIMITIVES_MAP.put("Integer", "int");
+	PRIMITIVES_MAP.put("Float", "float");
+	PRIMITIVES_MAP.put("Double", "double");
+	PRIMITIVES_MAP.put("Boolean", "boolean");
+	PRIMITIVES_MAP.put("Long", "long");
+    }
+
+    private static String replaceWithPrimitive(String typeName) {
+	return PRIMITIVES_MAP.getOrDefault(typeName, typeName);
+    }
 
     private final TreeMaker make;
     private final List<Tree> members;
     private final List<VariableElement> elements;
     private final String className;
+
+	    
 
     public PropertyMethodBuilder(TreeMaker make,
             List<Tree> members,
@@ -75,6 +93,8 @@ public class PropertyMethodBuilder {
                 MethodTree mt = (MethodTree) member;
                 for (Element element : elements) {
                     if( mt.getName().contentEquals(getGetterName(element.getSimpleName().toString()) ) ||
+			mt.getName().contentEquals(getGetterName(element.getSimpleName().toString(), "is") ) ||
+
                         mt.getName().contentEquals(getSetterName(element.getSimpleName().toString()) ) ||
                         mt.getName().contentEquals(getPropertyMethodName(element.getSimpleName().toString()))) {
                             
@@ -113,16 +133,19 @@ public class PropertyMethodBuilder {
     protected MethodTree createGetMethod(VariableElement element) {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.FINAL);
         List<AnnotationTree> annotations = new ArrayList<>();
-        VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
+	String typeName = replaceWithPrimitive(toStringWithoutPackages(element));
+        VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(typeName),
                 null);
 
         ExpressionTree returnType = make.QualIdent(parameter.getType().toString());
 
         final String bodyText = createPropGetterMethodBody(element);
 
+	String setterPrefix = ("boolean".equals(typeName)) ? "is" : "get"; 
+
         MethodTree method = make.Method(
                 make.Modifiers(modifiers, annotations),
-                getGetterName(element.getSimpleName().toString()),
+                getGetterName(element.getSimpleName().toString(), setterPrefix),
                 returnType,
                 Collections.<TypeParameterTree>emptyList(),
                 //Collections.<VariableTree>singletonList(parameter),
@@ -163,7 +186,8 @@ public class PropertyMethodBuilder {
     protected MethodTree createSetMethod(VariableElement element) {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.FINAL);
         List<AnnotationTree> annotations = new ArrayList<>();
-        VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
+	String typeName = replaceWithPrimitive(toStringWithoutPackages(element));
+        VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(typeName),
                 null);
 
         ExpressionTree returnType = make.QualIdent("void");
@@ -242,8 +266,12 @@ public class PropertyMethodBuilder {
     }
 
     private String getGetterName(String fieldName) {
+        return getGetterName(fieldName, "get");
+    }
+
+    private String getGetterName(String fieldName, String prefix) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("get");
+        sb.append(prefix);
         sb.append(this.prepareFieldNameForMethodName(fieldName));
         
         return sb.toString();
