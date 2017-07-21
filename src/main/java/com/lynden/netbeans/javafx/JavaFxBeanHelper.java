@@ -1,4 +1,4 @@
-/**
+/*
  * The MIT License (MIT)
  *
  * Copyright (c) 2015 Lynden, Inc.
@@ -20,7 +20,6 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
-*
  */
 package com.lynden.netbeans.javafx;
 
@@ -171,12 +170,12 @@ public class JavaFxBeanHelper implements CodeGenerator {
             for (VariableElement e : temp) {
                 try {
                     Class<?> memberClass = Class.forName(getClassName(e.asType().toString()));
-                    if (Property.class.isAssignableFrom(memberClass) &&
-                        !ListProperty.class.isAssignableFrom(memberClass) &&
-                        !MapProperty.class.isAssignableFrom(memberClass) &&
-                        !ObjectProperty.class.isAssignableFrom(memberClass) &&
-                        !SetProperty.class.isAssignableFrom(memberClass) ) {
-                        
+                    if (Property.class.isAssignableFrom(memberClass)
+                            && !ListProperty.class.isAssignableFrom(memberClass)
+                            && !MapProperty.class.isAssignableFrom(memberClass)
+                            && !ObjectProperty.class.isAssignableFrom(memberClass)
+                            && !SetProperty.class.isAssignableFrom(memberClass)) {
+
                         elementList.add(e);
                     }
                 } catch (Exception ex) {
@@ -188,13 +187,12 @@ public class JavaFxBeanHelper implements CodeGenerator {
             throw new CodeGeneratorException(ex);
         }
     }
-    
-    
-    protected String getClassName( String fullName ) {
-        if( !fullName.contains("<") ) {
+
+    protected String getClassName(String fullName) {
+        if (!fullName.contains("<")) {
             return fullName;
         } else {
-            return fullName.substring( 0, fullName.indexOf("<") );
+            return fullName.substring(0, fullName.indexOf("<"));
         }
     }
 

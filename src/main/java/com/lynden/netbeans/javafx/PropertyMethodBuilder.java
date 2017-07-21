@@ -1,26 +1,26 @@
-/**
-The MIT License (MIT)
-
-Copyright (c) 2015 Lynden, Inc.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-**/
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Lynden, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 package com.lynden.netbeans.javafx;
 
 import com.sun.source.tree.AnnotationTree;
@@ -47,29 +47,27 @@ import org.netbeans.api.java.source.TreeMaker;
  *
  */
 public class PropertyMethodBuilder {
-    
+
     private static final String PROPERTY = "Property"; // NOI18N
-    private static final Map<String,String> PRIMITIVES_MAP;
+    private static final Map<String, String> PRIMITIVES_MAP;
 
     static {
-	PRIMITIVES_MAP = new HashMap<>();
-	PRIMITIVES_MAP.put("Integer", "int");
-	PRIMITIVES_MAP.put("Float", "float");
-	PRIMITIVES_MAP.put("Double", "double");
-	PRIMITIVES_MAP.put("Boolean", "boolean");
-	PRIMITIVES_MAP.put("Long", "long");
+        PRIMITIVES_MAP = new HashMap<>();
+        PRIMITIVES_MAP.put("Integer", "int");
+        PRIMITIVES_MAP.put("Float", "float");
+        PRIMITIVES_MAP.put("Double", "double");
+        PRIMITIVES_MAP.put("Boolean", "boolean");
+        PRIMITIVES_MAP.put("Long", "long");
     }
 
     private static String replaceWithPrimitive(String typeName) {
-	return PRIMITIVES_MAP.getOrDefault(typeName, typeName);
+        return PRIMITIVES_MAP.getOrDefault(typeName, typeName);
     }
 
     private final TreeMaker make;
     private final List<Tree> members;
     private final List<VariableElement> elements;
     private final String className;
-
-	    
 
     public PropertyMethodBuilder(TreeMaker make,
             List<Tree> members,
@@ -83,7 +81,7 @@ public class PropertyMethodBuilder {
 
     int removeExistingPropMethods(int index) {
         int counter = 0;
-        if( elements == null ) {
+        if (elements == null) {
             return 0;
         }
         for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
@@ -92,17 +90,16 @@ public class PropertyMethodBuilder {
             if (member.getKind().equals(Tree.Kind.METHOD)) {
                 MethodTree mt = (MethodTree) member;
                 for (Element element : elements) {
-                    if( mt.getName().contentEquals(getGetterName(element.getSimpleName().toString()) ) ||
-			mt.getName().contentEquals(getGetterName(element.getSimpleName().toString(), "is") ) ||
+                    if (mt.getName().contentEquals(getGetterName(element.getSimpleName().toString()))
+                            || mt.getName().contentEquals(getGetterName(element.getSimpleName().toString(), "is"))
+                            || mt.getName().contentEquals(getSetterName(element.getSimpleName().toString()))
+                            || mt.getName().contentEquals(getPropertyMethodName(element.getSimpleName().toString()))) {
 
-                        mt.getName().contentEquals(getSetterName(element.getSimpleName().toString()) ) ||
-                        mt.getName().contentEquals(getPropertyMethodName(element.getSimpleName().toString()))) {
-                            
-                    treeIt.remove();
-                    if (index > counter) {
-                        index--;
-                    }
-                    break;
+                        treeIt.remove();
+                        if (index > counter) {
+                            index--;
+                        }
+                        break;
                     }
                 }
             }
@@ -113,10 +110,10 @@ public class PropertyMethodBuilder {
 
     void addPropMethods(int index) {
 
-        if( elements == null ) {
+        if (elements == null) {
             return;
         }
-        
+
         int position = index - 1;
         for (VariableElement element : elements) {
 
@@ -133,7 +130,7 @@ public class PropertyMethodBuilder {
     protected MethodTree createGetMethod(VariableElement element) {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.FINAL);
         List<AnnotationTree> annotations = new ArrayList<>();
-	String typeName = replaceWithPrimitive(toStringWithoutPackages(element));
+        String typeName = replaceWithPrimitive(toStringWithoutPackages(element));
         VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(typeName),
                 null);
 
@@ -141,7 +138,7 @@ public class PropertyMethodBuilder {
 
         final String bodyText = createPropGetterMethodBody(element);
 
-	String setterPrefix = ("boolean".equals(typeName)) ? "is" : "get"; 
+        String setterPrefix = ("boolean".equals(typeName)) ? "is" : "get";
 
         MethodTree method = make.Method(
                 make.Modifiers(modifiers, annotations),
@@ -186,7 +183,7 @@ public class PropertyMethodBuilder {
     protected MethodTree createSetMethod(VariableElement element) {
         Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.FINAL);
         List<AnnotationTree> annotations = new ArrayList<>();
-	String typeName = replaceWithPrimitive(toStringWithoutPackages(element));
+        String typeName = replaceWithPrimitive(toStringWithoutPackages(element));
         VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(typeName),
                 null);
 
@@ -239,8 +236,8 @@ public class PropertyMethodBuilder {
         for (VariableElement element : elements) {
             VariableTree field
                     = make.Variable(make.Modifiers(
-                                    EnumSet.of(Modifier.PRIVATE),
-                                    Collections.<AnnotationTree>emptyList()),
+                            EnumSet.of(Modifier.PRIVATE),
+                            Collections.<AnnotationTree>emptyList()),
                             element.getSimpleName().toString(),
                             make.Identifier(toStringWithoutPackages(element)),
                             null);
@@ -253,7 +250,7 @@ public class PropertyMethodBuilder {
         final StringBuilder sb = new StringBuilder();
         sb.append(this.prepareFieldNameForMethodName(fieldName, Boolean.FALSE));
         sb.append(PROPERTY);
-        
+
         return sb.toString();
     }
 
@@ -261,7 +258,7 @@ public class PropertyMethodBuilder {
         final StringBuilder sb = new StringBuilder();
         sb.append("set");
         sb.append(this.prepareFieldNameForMethodName(fieldName));
-        
+
         return sb.toString();
     }
 
@@ -273,22 +270,22 @@ public class PropertyMethodBuilder {
         final StringBuilder sb = new StringBuilder();
         sb.append(prefix);
         sb.append(this.prepareFieldNameForMethodName(fieldName));
-        
+
         return sb.toString();
     }
-    
+
     private String prepareFieldNameForMethodName(String fieldName, boolean firstCharToUpperCase) {
         if (firstCharToUpperCase) {
             fieldName = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
         }
-        
+
         if (fieldName.endsWith(PROPERTY)) {
             fieldName = fieldName.substring(0, fieldName.length() - PROPERTY.length());
         }
-        
+
         return fieldName;
     }
-    
+
     private String prepareFieldNameForMethodName(String fieldName) {
         return this.prepareFieldNameForMethodName(fieldName, Boolean.TRUE);
     }
