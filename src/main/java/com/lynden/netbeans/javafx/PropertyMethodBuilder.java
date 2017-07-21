@@ -248,7 +248,7 @@ public class PropertyMethodBuilder {
 
     private String getPropertyMethodName(String fieldName) {
         final StringBuilder sb = new StringBuilder();
-        sb.append(this.prepareFieldNameForMethodName(fieldName, Boolean.FALSE));
+        sb.append(this.prepareFieldNameForMethodName(fieldName, false));
         sb.append(PROPERTY);
 
         return sb.toString();
@@ -287,7 +287,7 @@ public class PropertyMethodBuilder {
     }
 
     private String prepareFieldNameForMethodName(String fieldName) {
-        return this.prepareFieldNameForMethodName(fieldName, Boolean.TRUE);
+        return this.prepareFieldNameForMethodName(fieldName, true);
     }
 
     private static String toStringWithoutPackages(VariableElement element) {
