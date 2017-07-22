@@ -35,6 +35,8 @@ import javafx.beans.property.*;
 import javafx.embed.swing.JFXPanel;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.swing.text.Document;
@@ -169,16 +171,19 @@ public class JavaFxBeanHelper implements CodeGenerator {
 
             for (VariableElement e : temp) {
                 try {
-                    Class<?> memberClass = Class.forName(getClassName(e.asType().toString()));
-                    if (Property.class.isAssignableFrom(memberClass)
-                            && !ListProperty.class.isAssignableFrom(memberClass)
-                            && !MapProperty.class.isAssignableFrom(memberClass)
-                            && !ObjectProperty.class.isAssignableFrom(memberClass)
-                            && !SetProperty.class.isAssignableFrom(memberClass)) {
+                    TypeMirror memberType = e.asType();
 
-                        elementList.add(e);
+                    /* Checking if memberType is a class. Otherwise
+                     * Class.forName would throw an error. */
+                    if (memberType.getKind() == TypeKind.DECLARED) {
+
+                        Class<?> memberClass = Class.forName(getClassName(memberType.toString()));
+                        if (Property.class.isAssignableFrom(memberClass)) {
+
+                            elementList.add(e);
+                        }
                     }
-                } catch (Exception ex) {
+                } catch (ClassNotFoundException ex) {
                     Exceptions.printStackTrace(ex);
                 }
             }
@@ -188,11 +193,19 @@ public class JavaFxBeanHelper implements CodeGenerator {
         }
     }
 
-    protected String getClassName(String fullName) {
+    public static String getClassName(String fullName) {
         if (!fullName.contains("<")) {
             return fullName;
         } else {
-            return fullName.substring(0, fullName.indexOf("<"));
+            return fullName.substring(0, fullName.indexOf('<'));
+        }
+    }
+
+    public static String getTypeParameters(String fullName) {
+        if (!fullName.contains("<")) {
+            return "";
+        } else {
+            return fullName.substring(fullName.indexOf('<') + 1, fullName.lastIndexOf('>'));
         }
     }
 
