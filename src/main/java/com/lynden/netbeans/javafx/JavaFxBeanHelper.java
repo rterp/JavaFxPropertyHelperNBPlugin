@@ -30,13 +30,13 @@ import com.sun.source.util.TreePath;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
-import javafx.beans.property.*;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javafx.embed.swing.JFXPanel;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.TypeKind;
-import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.swing.text.Document;
@@ -54,6 +54,21 @@ import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
 public class JavaFxBeanHelper implements CodeGenerator {
+
+    private static final Set<String> SUPPORTED_CLASSES = new HashSet<>();
+
+    static {
+        SUPPORTED_CLASSES.add("javafx.beans.property.IntegerProperty");
+        SUPPORTED_CLASSES.add("javafx.beans.property.LongProperty");
+        SUPPORTED_CLASSES.add("javafx.beans.property.FloatProperty");
+        SUPPORTED_CLASSES.add("javafx.beans.property.DoubleProperty");
+        SUPPORTED_CLASSES.add("javafx.beans.property.BooleanProperty");
+        SUPPORTED_CLASSES.add("javafx.beans.property.StringProperty");
+        SUPPORTED_CLASSES.add("javafx.beans.property.ListProperty");
+        SUPPORTED_CLASSES.add("javafx.beans.property.SetProperty");
+        SUPPORTED_CLASSES.add("javafx.beans.property.MapProperty");
+        SUPPORTED_CLASSES.add("javafx.beans.property.ObjectProperty");
+    }
 
     protected JTextComponent textComponent;
     //this is needed to initialize the JavaFx Toolkit
@@ -157,7 +172,6 @@ public class JavaFxBeanHelper implements CodeGenerator {
 
     private List<VariableElement> getFields(Lookup context, CompilationController controller) throws CodeGeneratorException {
         try {
-            List<VariableElement> elementList = new ArrayList<>();
             TreePath treePath = context.lookup(TreePath.class);
             TreePath path = TreeHelper.getParentElementOfKind(Tree.Kind.CLASS, treePath);
             TypeElement typeElement = (TypeElement) controller.getTrees().getElement(path);
@@ -167,27 +181,13 @@ public class JavaFxBeanHelper implements CodeGenerator {
             }
 
             Elements elements = controller.getElements();
-            List<VariableElement> temp = ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
+            List<VariableElement> allFields = ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
 
-            for (VariableElement e : temp) {
-                try {
-                    TypeMirror memberType = e.asType();
+            List<VariableElement> supportedFields = allFields.stream().filter((VariableElement var) -> {
+                return SUPPORTED_CLASSES.contains(getClassName(var.asType().toString()));
+            }).collect(Collectors.toList());
 
-                    /* Checking if memberType is a class. Otherwise
-                     * Class.forName would throw an error. */
-                    if (memberType.getKind() == TypeKind.DECLARED) {
-
-                        Class<?> memberClass = Class.forName(getClassName(memberType.toString()));
-                        if (Property.class.isAssignableFrom(memberClass)) {
-
-                            elementList.add(e);
-                        }
-                    }
-                } catch (ClassNotFoundException ex) {
-                    Exceptions.printStackTrace(ex);
-                }
-            }
-            return elementList;
+            return supportedFields;
         } catch (NullPointerException ex) {
             throw new CodeGeneratorException(ex);
         }
