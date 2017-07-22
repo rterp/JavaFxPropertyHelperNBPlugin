@@ -136,9 +136,9 @@ public class PropertyMethodBuilder {
         for (VariableElement element : elements) {
 
             position = Math.min(position + 1, members.size());
-            members.add(position, createSetMethod(element));
-            position = Math.min(position + 1, members.size());
             members.add(position, createGetMethod(element));
+            position = Math.min(position + 1, members.size());
+            members.add(position, createSetMethod(element));
             position = Math.min(position + 1, members.size());
             members.add(position, createPropertyMethod(element));
 
