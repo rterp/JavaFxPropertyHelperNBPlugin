@@ -24,7 +24,6 @@
 package com.lynden.netbeans.javafx;
 
 import com.sun.source.tree.ClassTree;
-import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import java.io.IOException;
@@ -159,11 +158,12 @@ public class JavaFxBeanHelper implements CodeGenerator {
 
             propertyMethodBuilder.addPropMethods(index);
 
-            ClassTree newClassTree = make.Class(classTree.getModifiers(),
+            ClassTree newClassTree = make.Class(
+                    classTree.getModifiers(),
                     classTree.getSimpleName(),
                     classTree.getTypeParameters(),
                     classTree.getExtendsClause(),
-                    (List<ExpressionTree>) classTree.getImplementsClause(),
+                    classTree.getImplementsClause(),
                     members);
 
             wc.rewrite(classTree, newClassTree);
@@ -184,28 +184,12 @@ public class JavaFxBeanHelper implements CodeGenerator {
             List<VariableElement> allFields = ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
 
             List<VariableElement> supportedFields = allFields.stream().filter((VariableElement var) -> {
-                return SUPPORTED_CLASSES.contains(getClassName(var.asType().toString()));
+                return SUPPORTED_CLASSES.contains(TypeHelper.getClassName(var.asType().toString()));
             }).collect(Collectors.toList());
 
             return supportedFields;
         } catch (NullPointerException ex) {
             throw new CodeGeneratorException(ex);
-        }
-    }
-
-    public static String getClassName(String fullName) {
-        if (!fullName.contains("<")) {
-            return fullName;
-        } else {
-            return fullName.substring(0, fullName.indexOf('<'));
-        }
-    }
-
-    public static String getTypeParameters(String fullName) {
-        if (!fullName.contains("<")) {
-            return "";
-        } else {
-            return fullName.substring(fullName.indexOf('<') + 1, fullName.lastIndexOf('>'));
         }
     }
 

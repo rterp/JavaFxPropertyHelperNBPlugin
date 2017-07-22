@@ -24,9 +24,11 @@
 package com.lynden.netbeans.javafx;
 
 import com.sun.source.tree.AnnotationTree;
+import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.ModifiersTree;
+import com.sun.source.tree.StatementTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.TypeParameterTree;
 import com.sun.source.tree.VariableTree;
@@ -66,8 +68,8 @@ public class PropertyMethodBuilder {
 
     private static String getValueType(String typeName) {
 
-        String className = JavaFxBeanHelper.getClassName(typeName);
-        String typeParams = JavaFxBeanHelper.getTypeParameters(typeName);
+        String className = TypeHelper.getClassName(typeName);
+        String typeParams = TypeHelper.getTypeParameters(typeName);
 
         if (VALUE_TYPES.containsKey(className)) {
             return VALUE_TYPES.get(className);
@@ -85,22 +87,22 @@ public class PropertyMethodBuilder {
 
     private final TreeMaker make;
     private final List<Tree> members;
-    private final List<VariableElement> elements;
+    private final List<VariableElement> fields;
     private final String className;
 
     public PropertyMethodBuilder(TreeMaker make,
             List<Tree> members,
-            List<VariableElement> elements,
+            List<VariableElement> fields,
             String className) {
         this.make = make;
         this.members = members;
-        this.elements = elements;
+        this.fields = fields;
         this.className = className;
     }
 
     int removeExistingPropMethods(int index) {
         int counter = 0;
-        if (elements == null) {
+        if (fields == null) {
             return 0;
         }
         for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
@@ -108,11 +110,11 @@ public class PropertyMethodBuilder {
 
             if (member.getKind().equals(Tree.Kind.METHOD)) {
                 MethodTree mt = (MethodTree) member;
-                for (Element element : elements) {
-                    if (mt.getName().contentEquals(getGetMethodName(element.getSimpleName().toString()))
-                            || mt.getName().contentEquals(getGetMethodName(element.getSimpleName().toString(), "is"))
-                            || mt.getName().contentEquals(getSetMethodName(element.getSimpleName().toString()))
-                            || mt.getName().contentEquals(getPropertyMethodName(element.getSimpleName().toString()))) {
+                for (Element field : fields) {
+                    if (mt.getName().contentEquals(getGetMethodName(field.getSimpleName().toString()))
+                            || mt.getName().contentEquals(getGetMethodName(field.getSimpleName().toString(), "is"))
+                            || mt.getName().contentEquals(getSetMethodName(field.getSimpleName().toString()))
+                            || mt.getName().contentEquals(getPropertyMethodName(field.getSimpleName().toString()))) {
 
                         treeIt.remove();
                         if (index > counter) {
@@ -129,118 +131,25 @@ public class PropertyMethodBuilder {
 
     void addPropMethods(int index) {
 
-        if (elements == null) {
+        if (fields == null) {
             return;
         }
 
         int position = index - 1;
-        for (VariableElement element : elements) {
+        for (VariableElement field : fields) {
 
             position = Math.min(position + 1, members.size());
-            members.add(position, createGetMethod(element));
+            members.add(position, createGetMethod(field));
             position = Math.min(position + 1, members.size());
-            members.add(position, createSetMethod(element));
+            members.add(position, createSetMethod(field));
             position = Math.min(position + 1, members.size());
-            members.add(position, createPropertyMethod(element));
+            members.add(position, createPropertyMethod(field));
 
         }
     }
 
-    protected MethodTree createGetMethod(VariableElement element) {
-        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PUBLIC, Modifier.FINAL));
-
-        String returnTypeName = getValueType(element.asType().toString());
-        Tree returnType = make.Type(returnTypeName);
-
-        String getterPrefix = ("boolean".equals(returnTypeName)) ? "is" : "get";
-        String name = getGetMethodName(element.getSimpleName().toString(), getterPrefix);
-
-        List<TypeParameterTree> typeParameters = Collections.emptyList();
-
-        List<VariableTree> parameters = Collections.emptyList();
-
-        List<ExpressionTree> throwsList = Collections.emptyList();
-
-        String body = createGetMethodBody(element);
-
-        ExpressionTree defaultValue = null;
-
-
-        return make.Method(modifiers, name, returnType, typeParameters, parameters, throwsList, body, defaultValue);
-    }
-
-    protected MethodTree createPropertyMethod(VariableElement element) {
-        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PUBLIC));
-
-        Tree returnType = make.Type(element.asType().toString());
-
-        String name = getPropertyMethodName(element.getSimpleName().toString());
-
-        List<TypeParameterTree> typeParameters = Collections.emptyList();
-
-        List<VariableTree> parameters = Collections.emptyList();
-
-        List<ExpressionTree> throwsList = Collections.emptyList();
-
-        String body = createPropertyMethodBody(element);
-
-        ExpressionTree defaultValue = null;
-
-
-        return make.Method(modifiers, name, returnType, typeParameters, parameters, throwsList, body, defaultValue);
-    }
-
-    protected MethodTree createSetMethod(VariableElement element) {
-        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PUBLIC, Modifier.FINAL));
-
-        Tree returnType = make.Type("void");
-
-        String name = getSetMethodName(element.getSimpleName().toString());
-
-        List<TypeParameterTree> typeParameters = Collections.emptyList();
-
-        String parameterTypeName = getValueType(element.asType().toString());
-        VariableTree parameter = make.Variable(make.Modifiers(Collections.emptySet()), "value", make.Type(parameterTypeName), null);
-        List<VariableTree> parameters = Collections.singletonList(parameter);
-
-        List<ExpressionTree> throwsList = Collections.emptyList();
-
-        String body = createSetMethodBody(element);
-
-        ExpressionTree defaultValue = null;
-
-
-        return make.Method(modifiers, name, returnType, typeParameters, parameters, throwsList, body, defaultValue);
-    }
-
-    protected String createPropertyMethodBody(Element element) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n")
-                .append("return ")
-                .append(element.getSimpleName())
-                .append(";\n}");
-        return sb.toString();
-    }
-
-    protected String createGetMethodBody(Element element) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n")
-                .append("return ")
-                .append(element.getSimpleName())
-                .append(".get();\n}");
-        return sb.toString();
-    }
-
-    protected String createSetMethodBody(Element element) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n")
-                .append(element.getSimpleName())
-                .append(".set(value);\n}");
-        return sb.toString();
-    }
-
     void addFields() {
-        for (VariableElement element : elements) {
+        for (VariableElement element : fields) {
             VariableTree field
                     = make.Variable(make.Modifiers(
                             EnumSet.of(Modifier.PRIVATE),
@@ -253,35 +162,115 @@ public class PropertyMethodBuilder {
         }
     }
 
-    private String getPropertyMethodName(String fieldName) {
-        final StringBuilder sb = new StringBuilder();
-        sb.append(this.prepareFieldNameForMethodName(fieldName, false));
-        sb.append(PROPERTY);
+    protected MethodTree createGetMethod(VariableElement field) {
+        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PUBLIC, Modifier.FINAL));
 
-        return sb.toString();
+        String returnTypeName = getValueType(field.asType().toString());
+        Tree returnType = make.Type(returnTypeName);
+
+        String getterPrefix = ("boolean".equals(returnTypeName)) ? "is" : "get";
+        String name = getGetMethodName(field.getSimpleName().toString(), getterPrefix);
+
+        List<TypeParameterTree> typeParameters = Collections.emptyList();
+
+        List<VariableTree> parameters = Collections.emptyList();
+
+        List<ExpressionTree> throwsList = Collections.emptyList();
+
+        BlockTree body = createGetMethodBody(field);
+
+        ExpressionTree defaultValue = null;
+
+
+        return make.Method(modifiers, name, returnType, typeParameters, parameters, throwsList, body, defaultValue);
     }
 
-    private String getSetMethodName(String fieldName) {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("set");
-        sb.append(this.prepareFieldNameForMethodName(fieldName));
+    protected MethodTree createSetMethod(VariableElement field) {
+        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PUBLIC, Modifier.FINAL));
 
-        return sb.toString();
+        Tree returnType = make.Type("void");
+
+        String name = getSetMethodName(field.getSimpleName().toString());
+
+        List<TypeParameterTree> typeParameters = Collections.emptyList();
+
+        String parameterTypeName = getValueType(field.asType().toString());
+        String parameterName = "value";
+        VariableTree parameter = make.Variable(make.Modifiers(Collections.emptySet()), parameterName, make.Type(parameterTypeName), null);
+        List<VariableTree> parameters = Collections.singletonList(parameter);
+
+        List<ExpressionTree> throwsList = Collections.emptyList();
+
+        BlockTree body = createSetMethodBody(field, parameterName);
+
+        ExpressionTree defaultValue = null;
+
+
+        return make.Method(modifiers, name, returnType, typeParameters, parameters, throwsList, body, defaultValue);
     }
 
-    private String getGetMethodName(String fieldName) {
+    protected MethodTree createPropertyMethod(VariableElement field) {
+        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PUBLIC));
+
+        Tree returnType = make.Type(field.asType().toString());
+
+        String name = getPropertyMethodName(field.getSimpleName().toString());
+
+        List<TypeParameterTree> typeParameters = Collections.emptyList();
+
+        List<VariableTree> parameters = Collections.emptyList();
+
+        List<ExpressionTree> throwsList = Collections.emptyList();
+
+        BlockTree body = createPropertyMethodBody(field);
+
+        ExpressionTree defaultValue = null;
+
+
+        return make.Method(modifiers, name, returnType, typeParameters, parameters, throwsList, body, defaultValue);
+    }
+
+    protected BlockTree createGetMethodBody(VariableElement field) {
+        /* return field.get(); */
+        ExpressionTree method = make.MemberSelect(make.Identifier(field), "get");
+        StatementTree statement = make.Return(make.MethodInvocation(Collections.emptyList(), method, Collections.emptyList()));
+
+        return make.Block(Collections.singletonList(statement), false);
+    }
+
+    protected BlockTree createSetMethodBody(VariableElement field, String parameterName) {
+        /* field.set(parameterName); */
+        ExpressionTree method = make.MemberSelect(make.Identifier(field), "set");
+        ExpressionTree parameter = make.Identifier(parameterName);
+        StatementTree statement = make.ExpressionStatement(make.MethodInvocation(Collections.emptyList(), method, Collections.singletonList(parameter)));
+
+        return make.Block(Collections.singletonList(statement), false);
+    }
+
+    protected BlockTree createPropertyMethodBody(VariableElement field) {
+        /* return field; */
+        StatementTree statement = make.Return(make.Identifier(field));
+
+        return make.Block(Collections.singletonList(statement), false);
+    }
+
+    private static String getGetMethodName(String fieldName) {
         return getGetMethodName(fieldName, "get");
     }
 
-    private String getGetMethodName(String fieldName, String prefix) {
-        final StringBuilder sb = new StringBuilder();
-        sb.append(prefix);
-        sb.append(this.prepareFieldNameForMethodName(fieldName));
-
-        return sb.toString();
+    private static String getGetMethodName(String fieldName, String prefix) {
+        return prefix + prepareFieldNameForMethodName(fieldName);
     }
 
-    private String prepareFieldNameForMethodName(String fieldName, boolean firstCharToUpperCase) {
+    private static String getSetMethodName(String fieldName) {
+        return "set" + prepareFieldNameForMethodName(fieldName);
+    }
+
+    private static String getPropertyMethodName(String fieldName) {
+        return prepareFieldNameForMethodName(fieldName, false) + PROPERTY;
+    }
+
+    private static String prepareFieldNameForMethodName(String fieldName, boolean firstCharToUpperCase) {
         if (firstCharToUpperCase) {
             fieldName = fieldName.substring(0, 1).toUpperCase(Locale.ROOT) + fieldName.substring(1);
         }
@@ -293,12 +282,12 @@ public class PropertyMethodBuilder {
         return fieldName;
     }
 
-    private String prepareFieldNameForMethodName(String fieldName) {
-        return this.prepareFieldNameForMethodName(fieldName, true);
+    private static String prepareFieldNameForMethodName(String fieldName) {
+        return prepareFieldNameForMethodName(fieldName, true);
     }
 
     private static String toStringWithoutPackages(VariableElement element) {
-        String fullProp = PackageHelper.removePackagesFromGenericsType(element.asType().toString());
+        String fullProp = TypeHelper.removePackagesFromGenericsType(element.asType().toString());
 
         return fullProp.substring(0, fullProp.indexOf(("Prop")));
     }

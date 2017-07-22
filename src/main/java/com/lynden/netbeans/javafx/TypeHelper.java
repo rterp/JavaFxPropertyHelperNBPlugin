@@ -30,7 +30,39 @@ import java.util.List;
  * Manipulates strings containing types.
  *
  */
-class PackageHelper {
+class TypeHelper {
+
+    /**
+     * Returns only the class name part of a type name without type parameters.
+     * {@code "java.util.Map<java.lang.String, java.lang.String>" -> "java.util.Map"}
+     *
+     * @param fullName
+     * @return class name
+     */
+    static String getClassName(String fullName) {
+        if (!fullName.contains("<")) {
+            return fullName;
+        } else {
+            return fullName.substring(0, fullName.indexOf('<'));
+        }
+    }
+
+    /**
+     * Returns only the type parameters part of a type name. Type params are in
+     * the same form as in the original type. If there were no type parameters,
+     * null is returned.
+     * {@code "java.util.Map<java.lang.String, java.lang.String>" -> "java.lang.String, java.lang.String"}
+     *
+     * @param fullName
+     * @return type parameters
+     */
+    static String getTypeParameters(String fullName) {
+        if (!fullName.contains("<")) {
+            return null;
+        } else {
+            return fullName.substring(fullName.indexOf('<') + 1, fullName.lastIndexOf('>'));
+        }
+    }
 
     /** Removes packages from class names (it manages generics too). i.e.
      * {@code java.lang.String -> String} and
