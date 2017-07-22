@@ -74,16 +74,6 @@ public class JavaFxBeanHelper implements CodeGenerator {
     protected JFXPanel panel = new JFXPanel();
     protected List<VariableElement> fields;
 
-    public JavaFxBeanHelper textComponent(final JTextComponent value) {
-        this.textComponent = value;
-        return this;
-    }
-
-    public JavaFxBeanHelper fields(final List<VariableElement> value) {
-        this.fields = value;
-        return this;
-    }
-
     /**
      *
      * @param context containing JTextComponent and possibly other items

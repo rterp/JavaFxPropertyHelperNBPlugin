@@ -23,7 +23,6 @@
  */
 package com.lynden.netbeans.javafx;
 
-import com.sun.source.tree.AnnotationTree;
 import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
@@ -145,20 +144,6 @@ public class PropertyMethodBuilder {
             position = Math.min(position + 1, members.size());
             members.add(position, createPropertyMethod(field));
 
-        }
-    }
-
-    void addFields() {
-        for (VariableElement element : fields) {
-            VariableTree field
-                    = make.Variable(make.Modifiers(
-                            EnumSet.of(Modifier.PRIVATE),
-                            Collections.<AnnotationTree>emptyList()),
-                            element.getSimpleName().toString(),
-                            make.Identifier(toStringWithoutPackages(element)),
-                            null);
-
-            members.add(field);
         }
     }
 
@@ -285,11 +270,4 @@ public class PropertyMethodBuilder {
     private static String prepareFieldNameForMethodName(String fieldName) {
         return prepareFieldNameForMethodName(fieldName, true);
     }
-
-    private static String toStringWithoutPackages(VariableElement element) {
-        String fullProp = TypeHelper.removePackagesFromGenericsType(element.asType().toString());
-
-        return fullProp.substring(0, fullProp.indexOf(("Prop")));
-    }
-
 }
