@@ -35,6 +35,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
@@ -282,7 +283,7 @@ public class PropertyMethodBuilder {
 
     private String prepareFieldNameForMethodName(String fieldName, boolean firstCharToUpperCase) {
         if (firstCharToUpperCase) {
-            fieldName = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+            fieldName = fieldName.substring(0, 1).toUpperCase(Locale.ROOT) + fieldName.substring(1);
         }
 
         if (fieldName.endsWith(PROPERTY)) {
