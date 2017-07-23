@@ -56,6 +56,7 @@ public class PropertyMethodBuilder {
     private static final Set<String> VALUE_TYPE_AS_PARAM = new HashSet<>();
 
     private static final Set<String> WRITABLE_PROPERTIES = new HashSet<>();
+    private static final Map<String, String> WRAPPED_READ_ONLY_TYPES = new HashMap<>();
 
     static {
 
@@ -72,6 +73,12 @@ public class PropertyMethodBuilder {
         VALUE_TYPES.put("javafx.beans.property.ReadOnlyDoubleProperty", "double");
         VALUE_TYPES.put("javafx.beans.property.ReadOnlyBooleanProperty", "boolean");
         VALUE_TYPES.put("javafx.beans.property.ReadOnlyStringProperty", "java.lang.String");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyIntegerWrapper", "int");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyLongWrapper", "long");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyFloatWrapper", "float");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyDoubleWrapper", "double");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyBooleanWrapper", "boolean");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyStringWrapper", "java.lang.String");
 
         /* Type of the value can be found in map, but it requires the same type
          * parameters as the property type. */
@@ -81,10 +88,14 @@ public class PropertyMethodBuilder {
         GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlyListProperty", "javafx.collections.ObservableList");
         GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlySetProperty", "javafx.collections.ObservableSet");
         GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlyMapProperty", "javafx.collections.ObservableMap");
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlyListWrapper", "javafx.collections.ObservableList");
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlySetWrapper", "javafx.collections.ObservableSet");
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlyMapWrapper", "javafx.collections.ObservableMap");
 
         /* Type of the value is given as a type parameter of the property type. */
         VALUE_TYPE_AS_PARAM.add("javafx.beans.property.ObjectProperty");
         VALUE_TYPE_AS_PARAM.add("javafx.beans.property.ReadOnlyObjectProperty");
+        VALUE_TYPE_AS_PARAM.add("javafx.beans.property.ReadOnlyObjectWrapper");
 
 
         /* These property types are writable. */
@@ -98,6 +109,19 @@ public class PropertyMethodBuilder {
         WRITABLE_PROPERTIES.add("javafx.beans.property.SetProperty");
         WRITABLE_PROPERTIES.add("javafx.beans.property.MapProperty");
         WRITABLE_PROPERTIES.add("javafx.beans.property.ObjectProperty");
+
+        /* Read-only wrapper types and their respective wrapped types. These may
+         * or may not be generic. If they are, the type parameters are the same. */
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyIntegerWrapper", "javafx.beans.property.ReadOnlyIntegerProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyLongWrapper", "javafx.beans.property.ReadOnlyLongProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyFloatWrapper", "javafx.beans.property.ReadOnlyFloatProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyDoubleWrapper", "javafx.beans.property.ReadOnlyDoubleProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyBooleanWrapper", "javafx.beans.property.ReadOnlyBooleanProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyStringWrapper", "javafx.beans.property.ReadOnlyStringProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyListWrapper", "javafx.beans.property.ReadOnlyListProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlySetWrapper", "javafx.beans.property.ReadOnlySetProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyMapWrapper", "javafx.beans.property.ReadOnlyMapProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyObjectWrapper", "javafx.beans.property.ReadOnlyObjectProperty");
     }
 
     private static String getValueType(String typeName) {
@@ -116,6 +140,26 @@ public class PropertyMethodBuilder {
 
         } else {
             return "java.lang.Object";
+        }
+    }
+
+    private static boolean isWritableType(String typeName) {
+        return WRITABLE_PROPERTIES.contains(TypeHelper.getClassName(typeName));
+    }
+
+    private static boolean isWrapperType(String typeName) {
+        return WRAPPED_READ_ONLY_TYPES.containsKey(TypeHelper.getClassName(typeName));
+    }
+
+    private static String getWrappedReadOnlyType(String typeName) {
+
+        String className = TypeHelper.getClassName(typeName);
+        String typeParams = TypeHelper.getTypeParameters(typeName);
+
+        if (typeParams == null) {
+            return WRAPPED_READ_ONLY_TYPES.get(className);
+        } else {
+            return WRAPPED_READ_ONLY_TYPES.get(className) + '<' + typeParams + '>';
         }
     }
 
@@ -139,7 +183,7 @@ public class PropertyMethodBuilder {
             createdMethods.add(createGetMethod(field));
 
             /* Only create set method if property is writable */
-            if (WRITABLE_PROPERTIES.contains(TypeHelper.getClassName(field.asType().toString()))) {
+            if (isWritableType(field.asType().toString())) {
                 createdMethods.add(createSetMethod(field));
             }
 
@@ -199,7 +243,10 @@ public class PropertyMethodBuilder {
     protected MethodTree createPropertyMethod(VariableElement field) {
         ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PUBLIC));
 
-        Tree returnType = make.Type(field.asType().toString());
+        String fieldTypeName = field.asType().toString();
+        boolean isReadOnlyWrapper = isWrapperType(fieldTypeName);
+
+        Tree returnType = make.Type(isReadOnlyWrapper ? getWrappedReadOnlyType(fieldTypeName) : fieldTypeName);
 
         String name = getPropertyMethodName(field.getSimpleName().toString());
 
@@ -209,7 +256,7 @@ public class PropertyMethodBuilder {
 
         List<ExpressionTree> throwsList = Collections.emptyList();
 
-        BlockTree body = createPropertyMethodBody(field);
+        BlockTree body = createPropertyMethodBody(field, isReadOnlyWrapper);
 
         ExpressionTree defaultValue = null;
 
@@ -234,9 +281,16 @@ public class PropertyMethodBuilder {
         return make.Block(Collections.singletonList(statement), false);
     }
 
-    protected BlockTree createPropertyMethodBody(VariableElement field) {
-        /* return field; */
-        StatementTree statement = make.Return(make.Identifier(field));
+    protected BlockTree createPropertyMethodBody(VariableElement field, boolean isReadOnlyWrapper) {
+        StatementTree statement;
+        if (isReadOnlyWrapper) {
+            /* return field.getReadOnlyProperty(); */
+            ExpressionTree method = make.MemberSelect(make.Identifier(field), "getReadOnlyProperty");
+            statement = make.Return(make.MethodInvocation(Collections.emptyList(), method, Collections.emptyList()));
+        } else {
+            /* return field; */
+            statement = make.Return(make.Identifier(field));
+        }
 
         return make.Block(Collections.singletonList(statement), false);
     }

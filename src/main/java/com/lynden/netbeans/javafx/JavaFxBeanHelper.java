@@ -79,6 +79,17 @@ public class JavaFxBeanHelper implements CodeGenerator {
         SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlySetProperty");
         SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlyMapProperty");
         SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlyObjectProperty");
+
+        SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlyIntegerWrapper");
+        SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlyLongWrapper");
+        SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlyFloatWrapper");
+        SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlyDoubleWrapper");
+        SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlyBooleanWrapper");
+        SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlyStringWrapper");
+        SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlyListWrapper");
+        SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlySetWrapper");
+        SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlyMapWrapper");
+        SUPPORTED_CLASSES.add("javafx.beans.property.ReadOnlyObjectWrapper");
     }
 
     protected JTextComponent textComponent;
