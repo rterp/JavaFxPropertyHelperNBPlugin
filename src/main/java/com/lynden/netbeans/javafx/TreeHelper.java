@@ -24,10 +24,12 @@
 package com.lynden.netbeans.javafx;
 
 import com.sun.source.tree.ClassTree;
+import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import java.io.IOException;
+import java.util.Collection;
 import javax.swing.text.Document;
 import org.netbeans.api.java.source.WorkingCopy;
 import org.netbeans.editor.GuardedDocument;
@@ -100,4 +102,17 @@ class TreeHelper {
         return index;
     }
 
+    /**
+     * Checks if the given collection of {@code members} contains a method with
+     * the same name as the given {@code method}.
+     *
+     * @param members
+     * @param method
+     * @return true if the collection contains a method with the same name
+     */
+    static boolean hasMethodWithSameName(Collection<Tree> members, MethodTree method) {
+        return members.stream().anyMatch((Tree member) -> {
+            return member.getKind().equals(Tree.Kind.METHOD) && ((MethodTree) member).getName().contentEquals(method.getName());
+        });
+    }
 }

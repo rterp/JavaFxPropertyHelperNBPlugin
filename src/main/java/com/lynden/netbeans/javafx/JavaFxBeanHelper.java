@@ -24,6 +24,7 @@
 package com.lynden.netbeans.javafx;
 
 import com.sun.source.tree.ClassTree;
+import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import java.io.IOException;
@@ -135,18 +136,22 @@ public class JavaFxBeanHelper implements CodeGenerator {
 
         TypeElement typeClassElement = (TypeElement) wc.getTrees().getElement(path);
         if (typeClassElement != null) {
-            int index = position;
 
             TreeMaker make = wc.getTreeMaker();
             ClassTree classTree = (ClassTree) path.getLeaf();
             List<Tree> members = new ArrayList<>(classTree.getMembers());
-            String className = typeClassElement.toString();
 
-            PropertyMethodBuilder propertyMethodBuilder = new PropertyMethodBuilder(make, members, fields, className);
+            PropertyMethodBuilder propertyMethodBuilder = new PropertyMethodBuilder(make, fields);
 
-            index = propertyMethodBuilder.removeExistingPropMethods(index);
+            List<MethodTree> createdMethods = propertyMethodBuilder.createPropMethods();
 
-            propertyMethodBuilder.addPropMethods(index);
+            /* Filtering out methods that might clash with the pre-existing
+             * ones. */
+            createdMethods.removeIf((MethodTree createdMethod) -> {
+                return TreeHelper.hasMethodWithSameName(members, createdMethod);
+            });
+
+            members.addAll(position, createdMethods);
 
             ClassTree newClassTree = make.Class(
                     classTree.getModifiers(),

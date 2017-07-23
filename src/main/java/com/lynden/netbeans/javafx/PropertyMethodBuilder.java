@@ -31,14 +31,13 @@ import com.sun.source.tree.StatementTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.TypeParameterTree;
 import com.sun.source.tree.VariableTree;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.VariableElement;
 import org.netbeans.api.java.source.TreeMaker;
@@ -85,66 +84,28 @@ public class PropertyMethodBuilder {
     }
 
     private final TreeMaker make;
-    private final List<Tree> members;
     private final List<VariableElement> fields;
-    private final String className;
 
-    public PropertyMethodBuilder(TreeMaker make,
-            List<Tree> members,
-            List<VariableElement> fields,
-            String className) {
+    public PropertyMethodBuilder(TreeMaker make, List<VariableElement> fields) {
         this.make = make;
-        this.members = members;
         this.fields = fields;
-        this.className = className;
     }
 
-    int removeExistingPropMethods(int index) {
-        int counter = 0;
-        if (fields == null) {
-            return 0;
-        }
-        for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
-            Tree member = treeIt.next();
-
-            if (member.getKind().equals(Tree.Kind.METHOD)) {
-                MethodTree mt = (MethodTree) member;
-                for (Element field : fields) {
-                    if (mt.getName().contentEquals(getGetMethodName(field.getSimpleName().toString()))
-                            || mt.getName().contentEquals(getGetMethodName(field.getSimpleName().toString(), "is"))
-                            || mt.getName().contentEquals(getSetMethodName(field.getSimpleName().toString()))
-                            || mt.getName().contentEquals(getPropertyMethodName(field.getSimpleName().toString()))) {
-
-                        treeIt.remove();
-                        if (index > counter) {
-                            index--;
-                        }
-                        break;
-                    }
-                }
-            }
-            counter++;
-        }
-        return index;
-    }
-
-    void addPropMethods(int index) {
+    List<MethodTree> createPropMethods() {
 
         if (fields == null) {
-            return;
+            return Collections.emptyList();
         }
 
-        int position = index - 1;
+        List<MethodTree> createdMethods = new ArrayList<>();
         for (VariableElement field : fields) {
 
-            position = Math.min(position + 1, members.size());
-            members.add(position, createGetMethod(field));
-            position = Math.min(position + 1, members.size());
-            members.add(position, createSetMethod(field));
-            position = Math.min(position + 1, members.size());
-            members.add(position, createPropertyMethod(field));
+            createdMethods.add(createGetMethod(field));
+            createdMethods.add(createSetMethod(field));
+            createdMethods.add(createPropertyMethod(field));
 
         }
+        return createdMethods;
     }
 
     protected MethodTree createGetMethod(VariableElement field) {
