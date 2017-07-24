@@ -48,6 +48,7 @@ import org.netbeans.api.java.source.CompilationController;
 import org.netbeans.api.java.source.JavaSource;
 import org.netbeans.api.java.source.ModificationResult;
 import org.netbeans.api.java.source.TreeMaker;
+import org.netbeans.api.java.source.TreeUtilities;
 import org.netbeans.api.java.source.WorkingCopy;
 import org.netbeans.spi.editor.codegen.CodeGenerator;
 import org.netbeans.spi.editor.codegen.CodeGeneratorContextProvider;
@@ -118,7 +119,17 @@ public class JavaFxBeanHelper implements CodeGenerator {
 
         @Override
         public List<? extends CodeGenerator> create(Lookup context) {
-            return Collections.singletonList(new JavaFxBeanHelper(context));
+            CompilationController controller = context.lookup(CompilationController.class);
+            TreePath path = context.lookup(TreePath.class);
+
+            TreeUtilities treeUtils = controller.getTreeUtilities();
+
+            TreePath classTreePath = treeUtils.getPathElementOfKind(EnumSet.of(Tree.Kind.CLASS, Tree.Kind.ENUM), path);
+            if (classTreePath != null) {
+                return Collections.singletonList(new JavaFxBeanHelper(context));
+            } else {
+                return Collections.emptyList();
+            }
         }
     }
 
