@@ -27,6 +27,7 @@ import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
+import com.sun.source.util.Trees;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -97,7 +98,6 @@ public class JavaFxBeanHelper implements CodeGenerator {
     protected JTextComponent textComponent;
     //this is needed to initialize the JavaFx Toolkit
     protected JFXPanel panel = new JFXPanel();
-    protected List<VariableElement> fields;
 
     /**
      *
@@ -106,12 +106,6 @@ public class JavaFxBeanHelper implements CodeGenerator {
      */
     private JavaFxBeanHelper(Lookup context) { // Good practice is not to save Lookup outside ctor
         textComponent = context.lookup(JTextComponent.class);
-        CompilationController controller = context.lookup(CompilationController.class);
-        try {
-            fields = getFields(context, controller);
-        } catch (CodeGeneratorException ex) {
-            Exceptions.printStackTrace(ex);
-        }
     }
 
     @MimeRegistration(mimeType = "text/x-java", position = 250, service = CodeGenerator.Factory.class)
@@ -152,8 +146,8 @@ public class JavaFxBeanHelper implements CodeGenerator {
 
         CancellableTask<WorkingCopy> task = new CodeGeneratorCancellableTask(textComponent) {
             @Override
-            public void generateCode(WorkingCopy workingCopy, TreePath path, int position) {
-                JavaFxBeanHelper.this.generateCode(workingCopy, path, position, JavaFxBeanHelper.this.fields);
+            protected void generateCode(WorkingCopy workingCopy, TreePath treePathAtCaret, int caretPosition) {
+                JavaFxBeanHelper.this.generateCode(workingCopy, treePathAtCaret, caretPosition);
             }
         };
 
@@ -166,73 +160,60 @@ public class JavaFxBeanHelper implements CodeGenerator {
 
     }
 
-    protected void generateCode(WorkingCopy wc, TreePath path, int position, List<VariableElement> fields) {
+    protected void generateCode(WorkingCopy wc, TreePath treePathAtCaret, int caretPosition) {
+        TreeUtilities treeUtils = wc.getTreeUtilities();
 
-        TypeElement typeClassElement = (TypeElement) wc.getTrees().getElement(path);
-        if (typeClassElement != null) {
+        TreePath classTreePath = treeUtils.getPathElementOfKind(EnumSet.of(Tree.Kind.CLASS, Tree.Kind.ENUM), treePathAtCaret);
+        if (classTreePath != null) {
 
-            TreeMaker make = wc.getTreeMaker();
-            ClassTree classTree = (ClassTree) path.getLeaf();
-            List<Tree> members = new ArrayList<>(classTree.getMembers());
+            int classMemberIndexAtCaret = TreeHelper.findClassMemberIndex(wc, (ClassTree) classTreePath.getLeaf(), caretPosition);
 
-            PropertyMethodBuilder propertyMethodBuilder = new PropertyMethodBuilder(make, fields);
-
-            List<MethodTree> createdMethods = propertyMethodBuilder.createPropMethods();
-
-            /* Filtering out methods that might clash with the pre-existing
-             * ones. */
-            createdMethods.removeIf((MethodTree createdMethod) -> {
-                return TreeHelper.hasMethodWithSameName(members, createdMethod);
-            });
-
-            members.addAll(position, createdMethods);
-
-            ClassTree newClassTree = make.Class(
-                    classTree.getModifiers(),
-                    classTree.getSimpleName(),
-                    classTree.getTypeParameters(),
-                    classTree.getExtendsClause(),
-                    classTree.getImplementsClause(),
-                    members);
-
-            wc.rewrite(classTree, newClassTree);
+            generateCodeInClass(wc, classTreePath, classMemberIndexAtCaret);
         }
     }
 
-    private List<VariableElement> getFields(Lookup context, CompilationController controller) throws CodeGeneratorException {
-        try {
-            TreePath treePath = context.lookup(TreePath.class);
-            TreePath path = controller.getTreeUtilities().getPathElementOfKind(EnumSet.of(Tree.Kind.CLASS, Tree.Kind.ENUM), treePath);
-            TypeElement typeElement = (TypeElement) controller.getTrees().getElement(path);
+    protected void generateCodeInClass(WorkingCopy wc, TreePath classTreePath, int classMemberIndexAtCaret) {
 
-            if (!typeElement.getKind().isClass()) {
-                throw new CodeGeneratorException("typeElement " + typeElement.getKind().name() + " is not a class, cannot generate code.");
-            }
+        List<VariableElement> fields = getFields(wc, classTreePath);
 
-            Elements elements = controller.getElements();
-            List<VariableElement> allFields = ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
+        TreeMaker make = wc.getTreeMaker();
+        ClassTree classTree = (ClassTree) classTreePath.getLeaf();
+        List<Tree> members = new ArrayList<>(classTree.getMembers());
 
-            List<VariableElement> supportedFields = allFields.stream().filter((VariableElement var) -> {
-                return SUPPORTED_CLASSES.contains(TypeHelper.getClassName(var.asType().toString()));
-            }).collect(Collectors.toList());
+        PropertyMethodBuilder propertyMethodBuilder = new PropertyMethodBuilder(make, fields);
 
-            return supportedFields;
-        } catch (NullPointerException ex) {
-            throw new CodeGeneratorException(ex);
-        }
+        List<MethodTree> createdMethods = propertyMethodBuilder.createPropMethods();
+
+        /* Filtering out methods that might clash with the pre-existing ones. */
+        createdMethods.removeIf((MethodTree createdMethod) -> {
+            return TreeHelper.hasMethodWithSameName(members, createdMethod);
+        });
+
+        members.addAll(classMemberIndexAtCaret, createdMethods);
+
+        ClassTree newClassTree = make.Class(
+                classTree.getModifiers(),
+                classTree.getSimpleName(),
+                classTree.getTypeParameters(),
+                classTree.getExtendsClause(),
+                classTree.getImplementsClause(),
+                members);
+
+        wc.rewrite(classTree, newClassTree);
     }
 
-    private static class CodeGeneratorException extends Exception {
+    private static List<VariableElement> getFields(CompilationController controller, TreePath classTreePath) {
+        Trees trees = controller.getTrees();
+        Elements elements = controller.getElements();
 
-        private static final long serialVersionUID = 1L;
+        TypeElement typeElement = (TypeElement) trees.getElement(classTreePath);
 
-        public CodeGeneratorException(String message) {
-            super(message);
-        }
+        List<VariableElement> allFields = ElementFilter.fieldsIn(elements.getAllMembers(typeElement));
 
-        public CodeGeneratorException(Throwable cause) {
-            super(cause);
-        }
+        List<VariableElement> supportedFields = allFields.stream().filter((VariableElement var) -> {
+            return SUPPORTED_CLASSES.contains(TypeHelper.getClassName(var.asType().toString()));
+        }).collect(Collectors.toList());
+
+        return supportedFields;
     }
-
 }

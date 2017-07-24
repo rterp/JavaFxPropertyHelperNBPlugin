@@ -23,11 +23,8 @@
  */
 package com.lynden.netbeans.javafx;
 
-import com.sun.source.tree.ClassTree;
-import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import java.io.IOException;
-import java.util.EnumSet;
 import javax.swing.text.JTextComponent;
 import org.netbeans.api.java.source.CancellableTask;
 import org.netbeans.api.java.source.JavaSource;
@@ -53,18 +50,15 @@ abstract class CodeGeneratorCancellableTask implements CancellableTask<WorkingCo
         generate(workingCopy);
     }
 
-    public abstract void generateCode(WorkingCopy workingCopy, TreePath path,
-            int position);
-
     private void generate(WorkingCopy wc) throws IOException {
         TreeUtilities treeUtils = wc.getTreeUtilities();
 
-        final int caretOffset = textComponent.getCaretPosition();
-        TreePath path = treeUtils.pathFor(caretOffset);
-        path = treeUtils.getPathElementOfKind(EnumSet.of(Tree.Kind.CLASS, Tree.Kind.ENUM), path);
-        int idx = TreeHelper.findClassMemberIndex(wc, (ClassTree) path.getLeaf(), caretOffset);
-        generateCode(wc, path, idx);
+        int caretPosition = textComponent.getCaretPosition();
+        TreePath treePathAtCaret = treeUtils.pathFor(caretPosition);
+        generateCode(wc, treePathAtCaret, caretPosition);
     }
+
+    protected abstract void generateCode(WorkingCopy workingCopy, TreePath treePathAtCaret, int caretPosition);
 
     @Override
     public void cancel() {
