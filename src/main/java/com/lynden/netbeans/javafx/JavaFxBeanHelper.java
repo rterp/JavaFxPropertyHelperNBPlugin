@@ -119,7 +119,10 @@ public class JavaFxBeanHelper implements CodeGenerator {
             TreeUtilities treeUtils = controller.getTreeUtilities();
 
             TreePath classTreePath = treeUtils.getPathElementOfKind(EnumSet.of(Tree.Kind.CLASS, Tree.Kind.ENUM), path);
-            if (classTreePath != null) {
+
+            /* Are we in a class and does the class have supported property
+             * fields? */
+            if ((classTreePath != null) && (!getFields(controller, classTreePath).isEmpty())) {
                 return Collections.singletonList(new JavaFxBeanHelper(context));
             } else {
                 return Collections.emptyList();
