@@ -27,9 +27,11 @@ import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import java.io.IOException;
+import java.util.EnumSet;
 import javax.swing.text.JTextComponent;
 import org.netbeans.api.java.source.CancellableTask;
 import org.netbeans.api.java.source.JavaSource;
+import org.netbeans.api.java.source.TreeUtilities;
 import org.netbeans.api.java.source.WorkingCopy;
 
 /**
@@ -55,9 +57,11 @@ abstract class CodeGeneratorCancellableTask implements CancellableTask<WorkingCo
             int position);
 
     private void generate(WorkingCopy wc) throws IOException {
+        TreeUtilities treeUtils = wc.getTreeUtilities();
+
         final int caretOffset = textComponent.getCaretPosition();
-        TreePath path = wc.getTreeUtilities().pathFor(caretOffset);
-        path = TreeHelper.getParentElementOfKind(Tree.Kind.CLASS, path);
+        TreePath path = treeUtils.pathFor(caretOffset);
+        path = treeUtils.getPathElementOfKind(EnumSet.of(Tree.Kind.CLASS, Tree.Kind.ENUM), path);
         int idx = TreeHelper.findClassMemberIndex(wc, (ClassTree) path.getLeaf(), caretOffset);
         generateCode(wc, path, idx);
     }

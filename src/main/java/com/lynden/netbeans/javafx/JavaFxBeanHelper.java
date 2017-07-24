@@ -30,6 +30,7 @@ import com.sun.source.util.TreePath;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -190,7 +191,7 @@ public class JavaFxBeanHelper implements CodeGenerator {
     private List<VariableElement> getFields(Lookup context, CompilationController controller) throws CodeGeneratorException {
         try {
             TreePath treePath = context.lookup(TreePath.class);
-            TreePath path = TreeHelper.getParentElementOfKind(Tree.Kind.CLASS, treePath);
+            TreePath path = controller.getTreeUtilities().getPathElementOfKind(EnumSet.of(Tree.Kind.CLASS, Tree.Kind.ENUM), treePath);
             TypeElement typeElement = (TypeElement) controller.getTrees().getElement(path);
 
             if (!typeElement.getKind().isClass()) {
