@@ -12,7 +12,8 @@ private StringProperty name;
 public StringProperty getName() { 
     return name;
 }
-public void setName( StringProperty name ) {
+
+public void setName(StringProperty name) {
     this.name = name;
 }
 ```
@@ -24,11 +25,11 @@ public final String getName() {
     return name.get();
 }
 
-public final void setName( String value ) {
+public final void setName(String value) {
     name.set(value);
 }
 
-public final StringProperty nameProperty() {
+public StringProperty nameProperty() {
     return name;
 }
 ```
@@ -38,16 +39,43 @@ which will create the following methods:
 
 ```java
 private StringProperty nameProperty;
+
 public final String getName() {
     return nameProperty.get();
 }
 
-public final void setName( String value ) {
+public final void setName(String value) {
     nameProperty.set(value);
 }
 
-public final StringProperty nameProperty() {
+public StringProperty nameProperty() {
     return nameProperty;
+}
+```
+
+Read-only properties and read-only wrapper types are also supported:
+
+```java
+private ReadOnlyStringProperty identifier;
+
+public final String getIdentifier() {
+    return identifier.get();
+}
+
+public ReadOnlyStringProperty identifierProperty() {
+    return identifier;
+}
+```
+
+```java
+private ReadOnlyStringWrapper identifier;
+
+public final String getIdentifier() {
+    return identifier.get();
+}
+
+public ReadOnlyStringProperty identifierProperty() {
+    return identifier.getReadOnlyProperty();
 }
 ```
 
@@ -71,12 +99,35 @@ Methods for supported property types will automatically be generated.
 * FloatProperty
 * IntegerProperty
 * LongProperty
-
-
-
-### Unsupported Property Types
 * ListProperty
 * MapProperty
 * ObjectProperty
 * SetProperty
 
+
+
+### Supported Read-only Property Types
+* ReadOnlyStringProperty
+* ReadOnlyBooleanProperty
+* ReadOnlyDoubleProperty
+* ReadOnlyFloatProperty
+* ReadOnlyIntegerProperty
+* ReadOnlyLongProperty
+* ReadOnlyListProperty
+* ReadOnlyMapProperty
+* ReadOnlyObjectProperty
+* ReadOnlySetProperty
+
+
+
+### Supported Read-only Wrapper Types
+* ReadOnlyStringWrapper
+* ReadOnlyBooleanWrapper
+* ReadOnlyDoubleWrapper
+* ReadOnlyFloatWrapper
+* ReadOnlyIntegerWrapper
+* ReadOnlyLongWrapper
+* ReadOnlyListWrapper
+* ReadOnlyMapWrapper
+* ReadOnlyObjectWrapper
+* ReadOnlySetWrapper
