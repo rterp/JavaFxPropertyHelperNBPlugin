@@ -1,31 +1,33 @@
-/**
-The MIT License (MIT)
-
-Copyright (c) 2015 Lynden, Inc.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-**/
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Lynden, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 package com.lynden.netbeans.javafx;
 
-import com.sun.source.tree.AnnotationTree;
+import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.MethodTree;
+import com.sun.source.tree.ModifiersTree;
+import com.sun.source.tree.StatementTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.TypeParameterTree;
 import com.sun.source.tree.VariableTree;
@@ -34,11 +36,10 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.VariableElement;
 import org.netbeans.api.java.source.TreeMaker;
@@ -47,256 +48,282 @@ import org.netbeans.api.java.source.TreeMaker;
  *
  */
 public class PropertyMethodBuilder {
-    
+
     private static final String PROPERTY = "Property"; // NOI18N
-    private static final Map<String,String> PRIMITIVES_MAP;
+
+    private static final Map<String, String> VALUE_TYPES = new HashMap<>();
+    private static final Map<String, String> GENERIC_VALUE_TYPES = new HashMap<>();
+    private static final Set<String> VALUE_TYPE_AS_PARAM = new HashSet<>();
+
+    private static final Set<String> WRITABLE_PROPERTIES = new HashSet<>();
+    private static final Map<String, String> WRAPPED_READ_ONLY_TYPES = new HashMap<>();
 
     static {
-	PRIMITIVES_MAP = new HashMap<>();
-	PRIMITIVES_MAP.put("Integer", "int");
-	PRIMITIVES_MAP.put("Float", "float");
-	PRIMITIVES_MAP.put("Double", "double");
-	PRIMITIVES_MAP.put("Boolean", "boolean");
-	PRIMITIVES_MAP.put("Long", "long");
+
+        /* Type of the value can be found in map. */
+        VALUE_TYPES.put("javafx.beans.property.IntegerProperty", "int");
+        VALUE_TYPES.put("javafx.beans.property.LongProperty", "long");
+        VALUE_TYPES.put("javafx.beans.property.FloatProperty", "float");
+        VALUE_TYPES.put("javafx.beans.property.DoubleProperty", "double");
+        VALUE_TYPES.put("javafx.beans.property.BooleanProperty", "boolean");
+        VALUE_TYPES.put("javafx.beans.property.StringProperty", "java.lang.String");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyIntegerProperty", "int");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyLongProperty", "long");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyFloatProperty", "float");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyDoubleProperty", "double");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyBooleanProperty", "boolean");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyStringProperty", "java.lang.String");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyIntegerWrapper", "int");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyLongWrapper", "long");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyFloatWrapper", "float");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyDoubleWrapper", "double");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyBooleanWrapper", "boolean");
+        VALUE_TYPES.put("javafx.beans.property.ReadOnlyStringWrapper", "java.lang.String");
+
+        /* Type of the value can be found in map, but it requires the same type
+         * parameters as the property type. */
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.ListProperty", "javafx.collections.ObservableList");
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.SetProperty", "javafx.collections.ObservableSet");
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.MapProperty", "javafx.collections.ObservableMap");
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlyListProperty", "javafx.collections.ObservableList");
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlySetProperty", "javafx.collections.ObservableSet");
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlyMapProperty", "javafx.collections.ObservableMap");
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlyListWrapper", "javafx.collections.ObservableList");
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlySetWrapper", "javafx.collections.ObservableSet");
+        GENERIC_VALUE_TYPES.put("javafx.beans.property.ReadOnlyMapWrapper", "javafx.collections.ObservableMap");
+
+        /* Type of the value is given as a type parameter of the property type. */
+        VALUE_TYPE_AS_PARAM.add("javafx.beans.property.ObjectProperty");
+        VALUE_TYPE_AS_PARAM.add("javafx.beans.property.ReadOnlyObjectProperty");
+        VALUE_TYPE_AS_PARAM.add("javafx.beans.property.ReadOnlyObjectWrapper");
+
+
+        /* These property types are writable. */
+        WRITABLE_PROPERTIES.add("javafx.beans.property.IntegerProperty");
+        WRITABLE_PROPERTIES.add("javafx.beans.property.LongProperty");
+        WRITABLE_PROPERTIES.add("javafx.beans.property.FloatProperty");
+        WRITABLE_PROPERTIES.add("javafx.beans.property.DoubleProperty");
+        WRITABLE_PROPERTIES.add("javafx.beans.property.BooleanProperty");
+        WRITABLE_PROPERTIES.add("javafx.beans.property.StringProperty");
+        WRITABLE_PROPERTIES.add("javafx.beans.property.ListProperty");
+        WRITABLE_PROPERTIES.add("javafx.beans.property.SetProperty");
+        WRITABLE_PROPERTIES.add("javafx.beans.property.MapProperty");
+        WRITABLE_PROPERTIES.add("javafx.beans.property.ObjectProperty");
+
+        /* Read-only wrapper types and their respective wrapped types. These may
+         * or may not be generic. If they are, the type parameters are the same. */
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyIntegerWrapper", "javafx.beans.property.ReadOnlyIntegerProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyLongWrapper", "javafx.beans.property.ReadOnlyLongProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyFloatWrapper", "javafx.beans.property.ReadOnlyFloatProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyDoubleWrapper", "javafx.beans.property.ReadOnlyDoubleProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyBooleanWrapper", "javafx.beans.property.ReadOnlyBooleanProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyStringWrapper", "javafx.beans.property.ReadOnlyStringProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyListWrapper", "javafx.beans.property.ReadOnlyListProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlySetWrapper", "javafx.beans.property.ReadOnlySetProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyMapWrapper", "javafx.beans.property.ReadOnlyMapProperty");
+        WRAPPED_READ_ONLY_TYPES.put("javafx.beans.property.ReadOnlyObjectWrapper", "javafx.beans.property.ReadOnlyObjectProperty");
     }
 
-    private static String replaceWithPrimitive(String typeName) {
-	return PRIMITIVES_MAP.getOrDefault(typeName, typeName);
+    private static String getValueType(String typeName) {
+
+        String className = TypeHelper.getClassName(typeName);
+        String typeParams = TypeHelper.getTypeParameters(typeName);
+
+        if (VALUE_TYPES.containsKey(className)) {
+            return VALUE_TYPES.get(className);
+
+        } else if (GENERIC_VALUE_TYPES.containsKey(className)) {
+            return GENERIC_VALUE_TYPES.get(className) + '<' + typeParams + '>';
+
+        } else if (VALUE_TYPE_AS_PARAM.contains(className)) {
+            return typeParams;
+
+        } else {
+            return "java.lang.Object";
+        }
+    }
+
+    private static boolean isWritableType(String typeName) {
+        return WRITABLE_PROPERTIES.contains(TypeHelper.getClassName(typeName));
+    }
+
+    private static boolean isWrapperType(String typeName) {
+        return WRAPPED_READ_ONLY_TYPES.containsKey(TypeHelper.getClassName(typeName));
+    }
+
+    private static String getWrappedReadOnlyType(String typeName) {
+
+        String className = TypeHelper.getClassName(typeName);
+        String typeParams = TypeHelper.getTypeParameters(typeName);
+
+        if (typeParams == null) {
+            return WRAPPED_READ_ONLY_TYPES.get(className);
+        } else {
+            return WRAPPED_READ_ONLY_TYPES.get(className) + '<' + typeParams + '>';
+        }
     }
 
     private final TreeMaker make;
-    private final List<Tree> members;
-    private final List<VariableElement> elements;
-    private final String className;
+    private final List<VariableElement> fields;
 
-	    
-
-    public PropertyMethodBuilder(TreeMaker make,
-            List<Tree> members,
-            List<VariableElement> elements,
-            String className) {
+    public PropertyMethodBuilder(TreeMaker make, List<VariableElement> fields) {
         this.make = make;
-        this.members = members;
-        this.elements = elements;
-        this.className = className;
+        this.fields = fields;
     }
 
-    int removeExistingPropMethods(int index) {
-        int counter = 0;
-        if( elements == null ) {
-            return 0;
+    List<MethodTree> createPropMethods() {
+
+        if (fields == null) {
+            return Collections.emptyList();
         }
-        for (Iterator<Tree> treeIt = members.iterator(); treeIt.hasNext();) {
-            Tree member = treeIt.next();
 
-            if (member.getKind().equals(Tree.Kind.METHOD)) {
-                MethodTree mt = (MethodTree) member;
-                for (Element element : elements) {
-                    if( mt.getName().contentEquals(getGetterName(element.getSimpleName().toString()) ) ||
-			mt.getName().contentEquals(getGetterName(element.getSimpleName().toString(), "is") ) ||
+        List<MethodTree> createdMethods = new ArrayList<>();
+        for (VariableElement field : fields) {
 
-                        mt.getName().contentEquals(getSetterName(element.getSimpleName().toString()) ) ||
-                        mt.getName().contentEquals(getPropertyMethodName(element.getSimpleName().toString()))) {
-                            
-                    treeIt.remove();
-                    if (index > counter) {
-                        index--;
-                    }
-                    break;
-                    }
-                }
+            createdMethods.add(createGetMethod(field));
+
+            /* Only create set method if property is writable */
+            if (isWritableType(field.asType().toString())) {
+                createdMethods.add(createSetMethod(field));
             }
-            counter++;
-        }
-        return index;
-    }
 
-    void addPropMethods(int index) {
-
-        if( elements == null ) {
-            return;
-        }
-        
-        int position = index - 1;
-        for (VariableElement element : elements) {
-
-            position = Math.min(position + 1, members.size());
-            members.add(position, createSetMethod(element));
-            position = Math.min(position + 1, members.size());
-            members.add(position, createGetMethod(element));
-            position = Math.min(position + 1, members.size());
-            members.add(position, createPropertyMethod(element));
+            createdMethods.add(createPropertyMethod(field));
 
         }
+        return createdMethods;
     }
 
-    protected MethodTree createGetMethod(VariableElement element) {
-        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.FINAL);
-        List<AnnotationTree> annotations = new ArrayList<>();
-	String typeName = replaceWithPrimitive(toStringWithoutPackages(element));
-        VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(typeName),
-                null);
+    protected MethodTree createGetMethod(VariableElement field) {
+        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PUBLIC, Modifier.FINAL));
 
-        ExpressionTree returnType = make.QualIdent(parameter.getType().toString());
+        String returnTypeName = getValueType(field.asType().toString());
+        Tree returnType = make.Type(returnTypeName);
 
-        final String bodyText = createPropGetterMethodBody(element);
+        String getterPrefix = ("boolean".equals(returnTypeName)) ? "is" : "get";
+        String name = getGetMethodName(field.getSimpleName().toString(), getterPrefix);
 
-	String setterPrefix = ("boolean".equals(typeName)) ? "is" : "get"; 
+        List<TypeParameterTree> typeParameters = Collections.emptyList();
 
-        MethodTree method = make.Method(
-                make.Modifiers(modifiers, annotations),
-                getGetterName(element.getSimpleName().toString(), setterPrefix),
-                returnType,
-                Collections.<TypeParameterTree>emptyList(),
-                //Collections.<VariableTree>singletonList(parameter),
-                Collections.<VariableTree>emptyList(),
-                Collections.<ExpressionTree>emptyList(),
-                bodyText,
-                null);
+        List<VariableTree> parameters = Collections.emptyList();
 
-        return method;
+        List<ExpressionTree> throwsList = Collections.emptyList();
 
+        BlockTree body = createGetMethodBody(field);
+
+        ExpressionTree defaultValue = null;
+
+
+        return make.Method(modifiers, name, returnType, typeParameters, parameters, throwsList, body, defaultValue);
     }
 
-    protected MethodTree createPropertyMethod(VariableElement element) {
-        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.FINAL);
-        List<AnnotationTree> annotations = new ArrayList<>();
-        VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(toStringWithoutPackages(element)),
-                null);
+    protected MethodTree createSetMethod(VariableElement field) {
+        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PUBLIC, Modifier.FINAL));
 
-        ExpressionTree returnType = make.QualIdent(parameter.getType().toString() + PROPERTY);
+        Tree returnType = make.Type("void");
 
-        final String bodyText = createPropertyMethodBody(element);
+        String name = getSetMethodName(field.getSimpleName().toString());
 
-        MethodTree method = make.Method(
-                make.Modifiers(modifiers, annotations),
-                getPropertyMethodName(element.getSimpleName().toString()),
-                returnType,
-                Collections.<TypeParameterTree>emptyList(),
-                //Collections.<VariableTree>singletonList(parameter),
-                Collections.<VariableTree>emptyList(),
-                Collections.<ExpressionTree>emptyList(),
-                bodyText,
-                null);
+        List<TypeParameterTree> typeParameters = Collections.emptyList();
 
-        return method;
+        String parameterTypeName = getValueType(field.asType().toString());
+        String parameterName = "value";
+        VariableTree parameter = make.Variable(make.Modifiers(Collections.emptySet()), parameterName, make.Type(parameterTypeName), null);
+        List<VariableTree> parameters = Collections.singletonList(parameter);
 
+        List<ExpressionTree> throwsList = Collections.emptyList();
+
+        BlockTree body = createSetMethodBody(field, parameterName);
+
+        ExpressionTree defaultValue = null;
+
+
+        return make.Method(modifiers, name, returnType, typeParameters, parameters, throwsList, body, defaultValue);
     }
 
-    protected MethodTree createSetMethod(VariableElement element) {
-        Set<Modifier> modifiers = EnumSet.of(Modifier.PUBLIC, Modifier.FINAL);
-        List<AnnotationTree> annotations = new ArrayList<>();
-	String typeName = replaceWithPrimitive(toStringWithoutPackages(element));
-        VariableTree parameter = make.Variable(make.Modifiers(new HashSet<Modifier>(), Collections.<AnnotationTree>emptyList()), "value", make.Identifier(typeName),
-                null);
+    protected MethodTree createPropertyMethod(VariableElement field) {
+        ModifiersTree modifiers = make.Modifiers(EnumSet.of(Modifier.PUBLIC));
 
-        ExpressionTree returnType = make.QualIdent("void");
+        String fieldTypeName = field.asType().toString();
+        boolean isReadOnlyWrapper = isWrapperType(fieldTypeName);
 
-        final String bodyText = createPropSetterMethodBody(element);
+        Tree returnType = make.Type(isReadOnlyWrapper ? getWrappedReadOnlyType(fieldTypeName) : fieldTypeName);
 
-        MethodTree method = make.Method(
-                make.Modifiers(modifiers, annotations),
-                getSetterName(element.getSimpleName().toString()),
-                returnType,
-                Collections.<TypeParameterTree>emptyList(),
-                //Collections.<VariableTree>singletonList(parameter),
-                Collections.<VariableTree>singletonList(parameter),
-                Collections.<ExpressionTree>emptyList(),
-                bodyText,
-                null);
+        String name = getPropertyMethodName(field.getSimpleName().toString());
 
-        return method;
+        List<TypeParameterTree> typeParameters = Collections.emptyList();
 
+        List<VariableTree> parameters = Collections.emptyList();
+
+        List<ExpressionTree> throwsList = Collections.emptyList();
+
+        BlockTree body = createPropertyMethodBody(field, isReadOnlyWrapper);
+
+        ExpressionTree defaultValue = null;
+
+
+        return make.Method(modifiers, name, returnType, typeParameters, parameters, throwsList, body, defaultValue);
     }
 
-    protected String createPropertyMethodBody(Element element) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n")
-                .append("return ")
-                .append(element.getSimpleName())
-                .append(";\n}");
-        return sb.toString();
+    protected BlockTree createGetMethodBody(VariableElement field) {
+        /* return field.get(); */
+        ExpressionTree method = make.MemberSelect(make.Identifier(field), "get");
+        StatementTree statement = make.Return(make.MethodInvocation(Collections.emptyList(), method, Collections.emptyList()));
+
+        return make.Block(Collections.singletonList(statement), false);
     }
 
-    protected String createPropGetterMethodBody(Element element) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n")
-                .append("return ")
-                .append(element.getSimpleName())
-                .append(".get();\n}");
-        return sb.toString();
+    protected BlockTree createSetMethodBody(VariableElement field, String parameterName) {
+        /* field.set(parameterName); */
+        ExpressionTree method = make.MemberSelect(make.Identifier(field), "set");
+        ExpressionTree parameter = make.Identifier(parameterName);
+        StatementTree statement = make.ExpressionStatement(make.MethodInvocation(Collections.emptyList(), method, Collections.singletonList(parameter)));
+
+        return make.Block(Collections.singletonList(statement), false);
     }
 
-    protected String createPropSetterMethodBody(Element element) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n")
-                .append(element.getSimpleName())
-                .append(".set(value);\n}");
-        return sb.toString();
-    }
-
-    void addFields() {
-        for (VariableElement element : elements) {
-            VariableTree field
-                    = make.Variable(make.Modifiers(
-                                    EnumSet.of(Modifier.PRIVATE),
-                                    Collections.<AnnotationTree>emptyList()),
-                            element.getSimpleName().toString(),
-                            make.Identifier(toStringWithoutPackages(element)),
-                            null);
-
-            members.add(field);
+    protected BlockTree createPropertyMethodBody(VariableElement field, boolean isReadOnlyWrapper) {
+        StatementTree statement;
+        if (isReadOnlyWrapper) {
+            /* return field.getReadOnlyProperty(); */
+            ExpressionTree method = make.MemberSelect(make.Identifier(field), "getReadOnlyProperty");
+            statement = make.Return(make.MethodInvocation(Collections.emptyList(), method, Collections.emptyList()));
+        } else {
+            /* return field; */
+            statement = make.Return(make.Identifier(field));
         }
+
+        return make.Block(Collections.singletonList(statement), false);
     }
 
-    private String getPropertyMethodName(String fieldName) {
-        final StringBuilder sb = new StringBuilder();
-        sb.append(this.prepareFieldNameForMethodName(fieldName, Boolean.FALSE));
-        sb.append(PROPERTY);
-        
-        return sb.toString();
+    private static String getGetMethodName(String fieldName) {
+        return getGetMethodName(fieldName, "get");
     }
 
-    private String getSetterName(String fieldName) {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("set");
-        sb.append(this.prepareFieldNameForMethodName(fieldName));
-        
-        return sb.toString();
+    private static String getGetMethodName(String fieldName, String prefix) {
+        return prefix + prepareFieldNameForMethodName(fieldName);
     }
 
-    private String getGetterName(String fieldName) {
-        return getGetterName(fieldName, "get");
+    private static String getSetMethodName(String fieldName) {
+        return "set" + prepareFieldNameForMethodName(fieldName);
     }
 
-    private String getGetterName(String fieldName, String prefix) {
-        final StringBuilder sb = new StringBuilder();
-        sb.append(prefix);
-        sb.append(this.prepareFieldNameForMethodName(fieldName));
-        
-        return sb.toString();
+    private static String getPropertyMethodName(String fieldName) {
+        return prepareFieldNameForMethodName(fieldName, false) + PROPERTY;
     }
-    
-    private String prepareFieldNameForMethodName(String fieldName, boolean firstCharToUpperCase) {
+
+    private static String prepareFieldNameForMethodName(String fieldName, boolean firstCharToUpperCase) {
         if (firstCharToUpperCase) {
-            fieldName = fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+            fieldName = fieldName.substring(0, 1).toUpperCase(Locale.ROOT) + fieldName.substring(1);
         }
-        
+
         if (fieldName.endsWith(PROPERTY)) {
             fieldName = fieldName.substring(0, fieldName.length() - PROPERTY.length());
         }
-        
+
         return fieldName;
     }
-    
-    private String prepareFieldNameForMethodName(String fieldName) {
-        return this.prepareFieldNameForMethodName(fieldName, Boolean.TRUE);
+
+    private static String prepareFieldNameForMethodName(String fieldName) {
+        return prepareFieldNameForMethodName(fieldName, true);
     }
-
-    private static String toStringWithoutPackages(VariableElement element) {
-        String fullProp = PackageHelper.removePackagesFromGenericsType(element.asType().toString());
-
-        return fullProp.substring(0, fullProp.indexOf(("Prop")));
-    }
-
 }
